@@ -1,4 +1,5 @@
 import logging
+SERV_EXCHANGE = 'servers'
 def make_logger():
     FORMAT = '%(asctime)-15s %(levelname)s %(message)s'
     logging.basicConfig(level=logging.DEBUG,format=FORMAT)
