@@ -1,15 +1,19 @@
 #!/usr/bin/env python
 from utils import make_logger
+from threading import Thread
+
 import pika
 
 SERV_EXCHANGE = 'servers2'
 Log = make_logger()
 
-class Client:
-    def __init__(self,pikahost):
+class ClientConnector(Thread):
+    def __init__(self,pikahost,client):
+        Thread.__init__(self)
         self.connect(pikahost)
         self.ping_servers()
-        self.run()
+        self.clientApp = client
+        self.server_addresses = {}
 
     def connect(self,pikahost):
         #connect to broker
@@ -46,16 +50,25 @@ class Client:
                                   body='')
 
     def run(self):
-        try:
-            self.channel.start_consuming()
-        except KeyboardInterrupt:
-            self.channel.close()
+        self.channel.start_consuming()
 
     def callback(self, ch, method, properties, body):
         rk = method.routing_key
         if rk == 'open':
+            self.clientApp.update_server_box(body,True)
+            self.server_addresses[body] = properties.reply_to
             print "[x] server %r is open" % body
+            print self.server_addresses
         elif rk == 'closed':
             Log.debug("server %r has closed" % body)
+            self.clientApp.update_server_box(body,False)
+            del self.server_addresses[body]
 
-c = Client('localhost')
+    def join_server(self,serv_name,username):
+        replyQueue = self.server_addresses[serv_name]
+        self.channel.basic_publish(exchange='',
+                                   routing_key=replyQueue,
+                                   body=username)
+
+    def disconnect(self):
+        self.connection.close()

@@ -2,16 +2,17 @@
 #from utils import make_logger
 import pika
 import sys
+from threading import Thread
 #Logg = make_logger()
 
 SERV_EXCHANGE = 'servers2'
 
 
-class Server:
+class Server(Thread):
     def __init__(self,pikahost,title):
+        Thread.__init__(self)
         self.servname = title
         self.connect(pikahost)
-        self.run()
 
 
     def connect(self,pikahost):
@@ -63,12 +64,12 @@ class Server:
                                   body=self.servname)
 
     def run(self):
-        print "listening"
-        try:
-            self.channel.start_consuming()
-        except KeyboardInterrupt:
-            self.self_publish_open(False)
-            self.channel.close()
+        self.channel.start_consuming()
+
+
+    def disconnect(self):
+        self.self_publish_open(False)
+        self.channel.close()
 
     def callback(self, ch, method, properties, body):
         rk = method.routing_key
@@ -77,8 +78,3 @@ class Server:
             self.self_publish_open(True)
         else:
             print(" [x] Received %r" % body)
-
-
-
-title = sys.argv[1] if len(sys.argv) > 1 else "Default server name"
-blaa = Server('localhost',title)
