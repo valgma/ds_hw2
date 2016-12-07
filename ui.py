@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 from utils import make_logger
 import Tkinter as tk
-import ttk
 from clientconnector import ClientConnector
 
 Log = make_logger()
@@ -17,7 +16,7 @@ class ClientApplication(tk.Frame):
 
         self.create_widgets()
         self.show_server_selection()
-        
+
         self.connector = ClientConnector(host,self)
         self.connector.setDaemon(True)
         self.connector.start()
@@ -33,7 +32,7 @@ class ClientApplication(tk.Frame):
         self.server_selection_frame = tk.Frame(self)
         self.username_label = tk.Label(self.server_selection_frame,text='Username')
         self.username_entry = tk.Entry(self.server_selection_frame)
-        self.server_box_label = ttk.Label(self.server_selection_frame,text="Available servers:")
+        self.server_box_label = tk.Label(self.server_selection_frame,text="Available servers:")
         self.server_box = tk.Listbox(self.server_selection_frame)
         self.server_button = tk.Button(self.server_selection_frame,
                                         text="Connect",
@@ -92,6 +91,8 @@ class ClientApplication(tk.Frame):
 
     def update_server_box(self,serv_name,add):
         self.update_listbox(self.server_box,serv_name,add)
+        if self.server_box.size() == 1:
+            self.server_box.select_set(0)
 
     def update_client_box(self,client_name,add):
         self.update_listbox(self.client_list,client_name,add)
