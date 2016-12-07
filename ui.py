@@ -48,15 +48,12 @@ class ClientApplication(tk.Frame):
         self.server_box.pack(fill=tk.BOTH,expand=1)
 
     def create_lobby(self):
-        self.lobby_buttons = []
         self.lobbyframe = tk.Frame(self)
         self.make_client_list(self.lobbyframe)
         self.gamesframe = tk.Frame(self)
         self.buttonframe = tk.Frame(self.gamesframe)
-        actions = [("Join game",self.join_game),("Host game",self.host_game)]
-        for b_label,b_action in actions:
-            b = tk.Button(self.buttonframe,text=b_label,command=b_action)
-            self.lobby_buttons.append(b)
+        self.lobby_joinbutton = tk.Button(self.buttonframe,text="Join Game",command=self.join_game)
+        self.lobby_hostbutton = tk.Button(self.buttonframe,text="host Game",command=self.host_game)
         self.game_name_label = tk.Label(self.buttonframe,text='Game name:')
         self.game_name_entry = tk.Entry(self.buttonframe)
 
@@ -65,8 +62,8 @@ class ClientApplication(tk.Frame):
         self.lobbyframe.pack(fill=tk.Y,side=tk.LEFT)
         self.gamesframe.pack(fill=tk.X,expand=1,side=tk.LEFT, anchor=tk.N)
         self.buttonframe.pack(fill=tk.X,expand=1,side=tk.LEFT)
-        for button in self.lobby_buttons:
-            button.pack(fill=tk.X, side=tk.LEFT,expand=1)
+        self.lobby_joinbutton.pack(fill=tk.X, side=tk.LEFT,expand=1)
+        self.lobby_hostbutton.pack(fill=tk.X, side=tk.LEFT,expand=1)
         self.game_name_label.pack(fill=tk.X,side=tk.LEFT,expand=1)
         self.game_name_entry.pack(fill=tk.X,side=tk.LEFT,expand=1)
 
