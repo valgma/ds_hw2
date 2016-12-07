@@ -1,125 +1,115 @@
 #!/usr/bin/env python
 #from utils import make_logger
 import pika
-import sys
-from threading import Thread
 from utils import make_logger, SERV_EXCHANGE
 
 Log = make_logger()
 
+GAME_KEYS = ["players.req","players.ping","players.remove"]
+SERVER_KEYS = ["ping_open"]
 
-class Server(Thread):
-    def __init__(self,pikahost,title,own_name,master):
-        Thread.__init__(self)
+class Server():
+    def __init__(self,pikahost,title):
         self.servname = title
+        self.connected_clients = []
         self.connect(pikahost)
-        self.app = master
-        self.approved_clients = [own_name]
-
-
 
     def connect(self,pikahost):
         #connect to broker
+        #TODO: Actually connect outside of localhost
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(
                 host=pikahost))
         self.channel = self.connection.channel()
 
+        self.declare_exchanges()
+        self.make_queues()
+        #bind queues to relevant topics, specify what is consumed where
+        self.bind_queues()
+        #publish own channel in servers
+        self.publish_status(True)
+
+    def declare_exchanges(self):
         #connect to server declaration exchange
-        self.channel.exchange_declare(exchange=SERV_EXCHANGE,
-                                        type='direct')
-
+        self.channel.exchange_declare(exchange=SERV_EXCHANGE,type='direct')
         #create server exchange
-        self.channel.exchange_declare(exchange=self.servname,
-                                     type='direct')
+        self.channel.exchange_declare(exchange=self.servname,type='direct')
 
+    def make_queues(self):
         #create lobby queue
         self.dec_result = self.channel.queue_declare(exclusive=True)
         self.lobby_queue = self.dec_result.method.queue
 
+        self.lobby_reply_prop = pika.BasicProperties(reply_to = self.lobby_queue)
         #create game queue
         self.game_dec = self.channel.queue_declare(exclusive=True)
         self.game_queue = self.game_dec.method.queue
 
+    def bind_queues(self):
         #listen to clients asking for server list
-        lobby_keys = ["ping_open"]
-        for k in lobby_keys:
+        for k in SERVER_KEYS:
             self.channel.queue_bind(exchange=SERV_EXCHANGE,
                                     queue=self.lobby_queue,
                                     routing_key=k)
 
         #listen to own server exchange
-        game_keys = ["players.req","players.ping"]
-        for k in game_keys:
+        for k in GAME_KEYS:
             self.channel.queue_bind(exchange=self.servname,
                                     queue=self.game_queue,
                                     routing_key=k)
 
-        #Process requests
+        #What queue is processed where
         self.channel.basic_consume(self.lobby_queue_callback,
                       queue=self.lobby_queue,
                       no_ack=True)
-
         self.channel.basic_consume(self.game_queue_callback,
                         queue=self.game_queue)
 
-        #publish own channel in servers
-        print "publishing channel"
-        self.channel.basic_publish(exchange=SERV_EXCHANGE,
-                                  routing_key='open',
-                                  properties=pika.BasicProperties(
-                                    reply_to = self.lobby_queue,
-                                    ),
-                                  body=self.servname)
+    def game_queue_callback(self, ch, method, properties, body):
+        rk = method.routing_key
+        Log.debug("Game queue received message %r with key %r" % (body,rk))
 
+        if rk == 'players.req':
+            if body not in self.connected_clients:
+                self.connected_clients.append(body)
+                target_queue = properties.reply_to
+                self.accept_player(body,target_queue)
 
-    def self_publish_open(self,available):
-        tag = 'open' if available else 'closed'
-        self.channel.basic_publish(exchange=SERV_EXCHANGE,
-                                  routing_key=tag,
-                                  properties=pika.BasicProperties(
-                                    reply_to = self.lobby_queue,
-                                    ),
-                                  body=self.servname)
+        elif rk == 'players.ping':
+            for player in self.connected_clients:
+                self.notify_exchange(self.servname,'players.add',player)
+
+        elif rk == 'players.remove':
+            try:
+                self.connected_clients.remove(body)
+            except:
+                pass
+
+    def notify_exchange(self,ex,key,message,props=None):
+        if props:
+            Log.debug("Sending exchange %r message %r with key %r with some extra properties." % (ex,message,key))
+            self.channel.basic_publish(exchange=ex,routing_key=key,body=message,properties=props)
+        else:
+            Log.debug("Sending exchange %r message %r with key %r." % (ex,message,key))
+            self.channel.basic_publish(exchange=ex,routing_key=key,body=message)
+
+    def accept_player(self,player_name,target):
+        self.notify_exchange(self.servname,'players.add',player_name)
+        self.notify_exchange('',target,'players.add:'+self.servname+':'+player_name)
+
+    def lobby_queue_callback(self, ch, method, properties, body):
+        rk = method.routing_key
+        Log.debug("Lobby queue received message %r with key %r." % (body,rk))
+        if rk == 'ping_open':
+            self.publish_status(True)
+
+    def publish_status(self,running):
+        tag = 'open' if running else 'closed'
+        self.notify_exchange(SERV_EXCHANGE,tag,self.servname,self.lobby_reply_prop)
 
     def run(self):
         self.channel.start_consuming()
 
-
     def disconnect(self):
         self.channel.exchange_delete(self.servname)
-        self.self_publish_open(False)
+        self.publish_status(False)
         self.channel.close()
-
-    def game_queue_callback(self, ch, method, properties, body):
-        rk = method.routing_key
-        Log.debug("Received game message %r with key %r" % (body,rk))
-        if rk == 'players.req':
-            if body not in self.approved_clients:
-                self.approved_clients.append(body)
-                target_queue = properties.reply_to
-                self.notify_new_player(body,target_queue)
-                self.app.update_client_box(body,True)
-        if rk == 'players.ping':
-            for player in self.approved_clients:
-                self.channel.basic_publish(exchange=self.servname,
-                                            routing_key='players.add',
-                                            body=player)
-
-    def notify_new_player(self,player_name,target):
-       self.channel.basic_publish(exchange=self.servname,
-                                  routing_key='players.add',
-                                  body=player_name)
-
-       self.channel.basic_publish(exchange='',
-                                    routing_key=target,
-                                    body="players.add:"+self.servname+":"+player_name)
-
-    def lobby_queue_callback(self, ch, method, properties, body):
-        rk = method.routing_key
-        if rk == 'ping_open':
-            print "received request for ID"
-            self.self_publish_open(True)
-        elif rk == 'players.req':
-            print " [x] Received name request %r" % body
-        else:
-            print(" [x] Received %r" % body)
