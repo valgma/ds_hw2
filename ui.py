@@ -49,23 +49,28 @@ class ClientApplication(tk.Frame):
 
     def create_lobby(self):
         self.lobbyframe = tk.Frame(self)
-        self.make_client_list(self.lobbyframe)
-        self.gamesframe = tk.Frame(self)
+        self.lobby_listframe = tk.Frame(self.lobbyframe)
+        self.make_client_list(self.lobby_listframe)
+        self.gamesframe = tk.Frame(self.lobbyframe)
         self.buttonframe = tk.Frame(self.gamesframe)
         self.lobby_joinbutton = tk.Button(self.buttonframe,text="Join Game",command=self.join_game)
-        self.lobby_hostbutton = tk.Button(self.buttonframe,text="host Game",command=self.host_game)
+        self.lobby_hostbutton = tk.Button(self.buttonframe,text="Create Game",command=self.host_game)
         self.game_name_label = tk.Label(self.buttonframe,text='Game name:')
         self.game_name_entry = tk.Entry(self.buttonframe)
+        self.lobby_roomlist = tk.Listbox(self.gamesframe)
 
     def show_lobby(self):
         self.connector.request_playerlist()
+        self.connector.request_roomlist()
         self.lobbyframe.pack(fill=tk.Y,side=tk.LEFT)
-        self.gamesframe.pack(fill=tk.X,expand=1,side=tk.LEFT, anchor=tk.N)
-        self.buttonframe.pack(fill=tk.X,expand=1,side=tk.LEFT)
+        self.lobby_listframe.pack(fill=tk.Y,side=tk.LEFT)
+        self.gamesframe.pack(fill=tk.BOTH,expand=1,side=tk.LEFT, anchor=tk.N)
+        self.buttonframe.pack(fill=tk.X,)
         self.lobby_joinbutton.pack(fill=tk.X, side=tk.LEFT,expand=1)
         self.lobby_hostbutton.pack(fill=tk.X, side=tk.LEFT,expand=1)
         self.game_name_label.pack(fill=tk.X,side=tk.LEFT,expand=1)
         self.game_name_entry.pack(fill=tk.X,side=tk.LEFT,expand=1)
+        self.lobby_roomlist.pack(fill=tk.BOTH,expand=1)
 
     def make_client_list(self,master):
         self.clients = [self.username]
@@ -80,11 +85,17 @@ class ClientApplication(tk.Frame):
     def hide_server_selection(self):
         self.server_selection_frame.pack_forget()
 
+    def draw_game(self):
+        l = tk.Label(self,text="GAME GOES HERE")
+        l.pack()
+
     def join_game(self):
         print "Dummy!"
 
     def host_game(self):
-        print "Dummy!"
+        name = self.game_name_entry.get()
+        if name:
+            self.connector.request_room(name)
 
     def update_server_box(self,serv_name,add):
         self.update_listbox(self.server_box,serv_name,add)

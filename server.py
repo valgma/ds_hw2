@@ -1,18 +1,22 @@
 #!/usr/bin/env python
 #from utils import make_logger
 import pika
-from utils import make_logger, SERV_EXCHANGE
+from gameroom import Gameroom
+from utils import make_logger, SERV_EXCHANGE, DELIM
 
 Log = make_logger()
 
-GAME_KEYS = ["players.req","players.ping","players.remove"]
+GAME_KEYS = ["players.req","players.ping","players.remove","gameroom.add","gameroom.remove","gameroom.ping"]
 SERVER_KEYS = ["ping_open"]
 
 class Server():
     def __init__(self,pikahost,title):
         self.servname = title
+        self.host = pikahost
         self.connected_clients = []
         self.connect(pikahost)
+        self.rooms = {}
+
 
     def connect(self,pikahost):
         #connect to broker
@@ -29,8 +33,6 @@ class Server():
         self.publish_status(True)
 
     def declare_exchanges(self):
-        #connect to server declaration exchange
-        self.channel.exchange_declare(exchange=SERV_EXCHANGE,type='direct')
         #create server exchange
         self.channel.exchange_declare(exchange=self.servname,type='direct')
 
@@ -83,6 +85,18 @@ class Server():
                 self.connected_clients.remove(body)
             except:
                 pass
+        elif rk == 'gameroom.add':
+            if body not in self.rooms.keys():
+                rm = Gameroom(self.host,body,self.servname)
+                rm.setDaemon(True)
+                rm.start()
+                self.rooms[body] = rm
+                returnaddr = properties.reply_to
+                message = "gameroom.confirm"+DELIM+body
+                self.notify_exchange('',returnaddr,message)
+        elif rk == 'gameroom.ping':
+            for rm in self.rooms.keys():
+                self.notify_exchange(self.servname,'gameroom.add',rm)
 
     def notify_exchange(self,ex,key,message,props=None):
         if props:
@@ -94,7 +108,7 @@ class Server():
 
     def accept_player(self,player_name,target):
         self.notify_exchange(self.servname,'players.add',player_name)
-        self.notify_exchange('',target,'players.add:'+self.servname+':'+player_name)
+        self.notify_exchange('',target,'players.confirm'+DELIM+self.servname+DELIM+player_name)
 
     def lobby_queue_callback(self, ch, method, properties, body):
         rk = method.routing_key
