@@ -63,6 +63,7 @@ class ClientApplication(tk.Frame):
         self.lobby_roomlist = tk.Listbox(self.gamesframe)
 
     def show_lobby(self):
+        self.lobby_roomlist.delete(0,tk.END)
         self.connector.request_playerlist()
         self.connector.request_roomlist()
         self.lobbyframe.pack(fill=tk.BOTH,side=tk.LEFT,expand=1)
@@ -106,7 +107,8 @@ class ClientApplication(tk.Frame):
         self.show_lobby()
 
     def join_game(self):
-        print "Dummy!"
+        selection = self.lobby_roomlist.curselection()[0]
+        self.connector.join_room(self.lobby_roomlist.get(selection))
 
     def host_game(self):
         name = self.game_name_entry.get()
@@ -122,7 +124,7 @@ class ClientApplication(tk.Frame):
 
     def update_server_box(self,serv_name,add):
         self.update_listbox(self.server_box,serv_name,add)
-        if self.server_box.size() == 1:
+        if add and self.server_box.size() == 1:
             self.server_box.select_set(0)
 
     def update_client_box(self,client_name,add):

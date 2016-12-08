@@ -5,10 +5,10 @@ from threading import Thread
 import pika
 
 LOBBY_KEYS = ["players.add", "players.remove","gameroom.add","gameroom.remove",\
-    "players.busy","players.available"]
+    "players.busy","players.available","players.ping"]
 SERVER_KEYS = ["open","closed"]
 Log = make_logger()
-GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.uri"]
+GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.uri","game.ping"]
 #TODO: Field for ":" and other magic strings
 
 class ClientConnector(Thread):
@@ -86,13 +86,20 @@ class ClientConnector(Thread):
 
     def game_callback(self, ch, method, properties, body):
         rk = method.routing_key
-        Log.debug("Lobby queue received message %r with key %r." % (body,rk))
+        Log.debug("Game queue received message %r with key %r." % (body,rk))
         if rk == "game.sayonara":
             self.game_ui.rem_player(body)
         elif rk == "game.joined":
             self.game_ui.add_player(body)
         elif rk == "game.uri":
             self.game_ui.connect_state(body)
+        elif rk == "game.ping":
+            self.notify_exchange(self.room_name,"game.joined",self.app.username)
+            #can't put it on server side because it might be out of sync..
+            if self.game_ui.leader == self.app.username:
+                self.notify_exchange(self.room_name,"game.leader",self.app.username)
+        elif rk == "game.leader":
+            self.game_ui.promote_to_leader(body)
 
     def lobby_callback(self, ch, method, properties, body):
         rk = method.routing_key
@@ -109,6 +116,10 @@ class ClientConnector(Thread):
             self.app.update_listbox(self.app.lobby_roomlist,body,True)
         elif rk == 'gameroom.remove':
             self.app.update_listbox(self.app.lobby_roomlist,body,False)
+        elif rk == 'players.ping':
+            self.notify_lobby_server('players.add',self.app.username)
+            if self.game_ui:
+                self.notify_lobby_server('players.busy',self.app.username)
         elif body.startswith("gameroom.confirm"):
             msg = body.split(DELIM)
             room_name = msg[1]
@@ -118,7 +129,6 @@ class ClientConnector(Thread):
             self.app.draw_game()
             self.game_ui = self.app.game_frame
             self.notify_lobby_server('players.busy',self.app.username)
-            self.notify_exchange(self.room_name,"game.joined",self.app.username)
 
     def join_server(self,serv_name,username):
         self.propose_name(serv_name,username)
@@ -144,8 +154,15 @@ class ClientConnector(Thread):
         replyprop = pika.BasicProperties(reply_to=self.lobby_queue)
         self.notify_lobby_server('gameroom.add',name,replyprop)
 
+    def join_room(self,name):
+        replyprop = pika.BasicProperties(reply_to=self.lobby_queue)
+        self.notify_lobby_server('gameroom.join',name,replyprop)
+
     def request_roomlist(self):
         self.notify_lobby_server('gameroom.ping','')
+
+    def get_game_players(self):
+        self.notify_exchange(self.room_name,"game.ping",'')
 
     def leave_server(self):
         self.notify_lobby_server('players.remove',self.app.username)
@@ -153,15 +170,13 @@ class ClientConnector(Thread):
         self.lobby_server = None
 
     def leave_game(self):
-        self.notify_exchange(self.room_name,"game.sayonara",self.app.username)
+        self.game_ui = None
         self.connect_exchange(self.room_name,GAME_KEYS,self.game_queue,False)
+        self.notify_exchange(self.room_name,"game.sayonara",self.app.username)
         self.notify_exchange(self.lobby_server,"players.available",self.app.username)
         self.room_name = ""
 
     def request_uri(self):
-        print "trying to request uri"
-        print "my room name"
-        print self.room_name
         self.notify_exchange(self.room_name,"game.requri",'')
 
     def disconnect(self):

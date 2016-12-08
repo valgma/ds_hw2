@@ -52,7 +52,8 @@ class Gameroom(Thread):
                 self.players.append(body)
             if not self.owner:
                 self.owner = body
-        if rk == "game.sayonara":
+                self.notify_players("game.leader",self.owner)
+        elif rk == "game.sayonara":
             if body in self.players:
                 self.players.remove(body)
             if not self.players:
@@ -60,9 +61,9 @@ class Gameroom(Thread):
                 self.server.destroy_room(self.roomname)
             elif self.owner == body:
                 self.owner = self.players[0]
-        if rk == "game.requri":
-            self.notify_exchange(self.exchange,"game.uri",str(self.uri))
-
+                self.notify_players("game.leader",self.owner)
+        elif rk == "game.requri":
+            self.notify_players("game.uri",str(self.uri))
 
     def notify_exchange(self,ex,key,message,props=None):
         if props:
@@ -79,6 +80,7 @@ class Gameroom(Thread):
         self.moveRound()
 
     def moveRound(self):
+        #see on vanast ajast, remake this
         print "NEXT!"
         self.notify_players('game.next','blaa')
         #uncomment this if you want to have a dummy notification every 5 seconds

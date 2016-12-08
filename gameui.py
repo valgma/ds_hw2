@@ -12,6 +12,7 @@ class GameUI(tk.Frame):
         self.make()
         self.gamestate = None
         self.connector.request_uri()
+        self.leader = ""
 
     def make(self):
         self.infobox = tk.Frame(self)
@@ -19,6 +20,7 @@ class GameUI(tk.Frame):
         self.l = tk.Label(self.gamebox,text="GAME GOES HERE")
         self.quitbutton = tk.Button(self.infobox,text='Leave game',bg='tomato',command=self.leave_game)
         self.players = tk.Listbox(self.infobox)
+        self.connector.get_game_players()
 
     def show(self):
         self.pack(fill=tk.BOTH,expand=1)
@@ -37,11 +39,27 @@ class GameUI(tk.Frame):
             self.players.insert(tk.END,name)
 
     def connect_state(self,uri):
-        print "Trying to connect to proxy"
-        self.gamestate = Pyro4.Proxy(uri)
-        for i in self.gamestate.testmethod():
-            print i
-        print "that happened.."
+        if not self.gamestate:
+            self.gamestate = Pyro4.Proxy(uri)
+            for i in self.gamestate.testmethod():
+                print i
+
+    def promote_to_leader(self,leader):
+        self.update_leadercolour(leader)
+
+    def update_leadercolour(self,leader,colour='pale green'):
+        if self.leader:
+            old_leader = self.leader
+            self.leader = ""
+            self.update_leadercolour(old_leader,'white')
+        try:
+            sisu = self.players.get(0,tk.END)
+            ind = self.players.get(0,tk.END).index(leader)
+            self.players.itemconfig(ind,bg=colour)
+            self.leader = leader
+        except Exception as e:
+            Log.debug("Couldn't mark/unmark %r as leader.", leader)
+            return
 
     def rem_player(self,name):
         try:
