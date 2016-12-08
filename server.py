@@ -33,6 +33,7 @@ class Server():
         self.publish_status(True)
 
     def declare_exchanges(self):
+        self.channel.exchange_declare(exchange=SERV_EXCHANGE,type='direct')
         #create server exchange
         self.channel.exchange_declare(exchange=self.servname,type='direct')
 
