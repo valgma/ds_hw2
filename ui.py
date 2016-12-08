@@ -52,20 +52,20 @@ class ClientApplication(tk.Frame):
         self.lobby_listframe = tk.Frame(self.lobbyframe)
         self.make_client_list(self.lobby_listframe)
         self.gamesframe = tk.Frame(self.lobbyframe)
-        self.buttonframe = tk.Frame(self.gamesframe)
-        self.lobby_joinbutton = tk.Button(self.buttonframe,text="Join Game",command=self.join_game)
-        self.lobby_hostbutton = tk.Button(self.buttonframe,text="Create Game",command=self.host_game)
-        self.game_name_label = tk.Label(self.buttonframe,text='Game name:')
-        self.game_name_entry = tk.Entry(self.buttonframe)
+        self.game_buttonframe = tk.Frame(self.gamesframe)
+        self.lobby_joinbutton = tk.Button(self.game_buttonframe,text="Join Game",command=self.join_game)
+        self.lobby_hostbutton = tk.Button(self.game_buttonframe,text="Create Game",command=self.host_game)
+        self.game_name_label = tk.Label(self.game_buttonframe,text='Game name:')
+        self.game_name_entry = tk.Entry(self.game_buttonframe)
         self.lobby_roomlist = tk.Listbox(self.gamesframe)
 
     def show_lobby(self):
         self.connector.request_playerlist()
         self.connector.request_roomlist()
-        self.lobbyframe.pack(fill=tk.Y,side=tk.LEFT)
+        self.lobbyframe.pack(fill=tk.BOTH,side=tk.LEFT,expand=1)
         self.lobby_listframe.pack(fill=tk.Y,side=tk.LEFT)
         self.gamesframe.pack(fill=tk.BOTH,expand=1,side=tk.LEFT, anchor=tk.N)
-        self.buttonframe.pack(fill=tk.X,)
+        self.game_buttonframe.pack(fill=tk.X)
         self.lobby_joinbutton.pack(fill=tk.X, side=tk.LEFT,expand=1)
         self.lobby_hostbutton.pack(fill=tk.X, side=tk.LEFT,expand=1)
         self.game_name_label.pack(fill=tk.X,side=tk.LEFT,expand=1)
@@ -73,11 +73,20 @@ class ClientApplication(tk.Frame):
         self.lobby_roomlist.pack(fill=tk.BOTH,expand=1)
 
     def make_client_list(self,master):
-        self.clients = [self.username]
-        self.client_list_label = tk.Label(master,text='Lobby:',pady=5)
+        self.lobby_buttonarea = tk.Frame(master)
+        self.lobby_backbutton = tk.Button(self.lobby_buttonarea,text='Leave server',command=self.lobby_back,bg='tomato')
+        self.client_list_label = tk.Label(self.lobby_buttonarea,text='Lobby:',pady=5)
         self.client_list = tk.Listbox(master)
-        self.client_list_label.pack(anchor=tk.NW)
+        self.lobby_buttonarea.pack(fill=tk.X)
+        self.lobby_backbutton.pack(side=tk.LEFT,anchor=tk.NW)
+        self.client_list_label.pack(side=tk.LEFT,fill=tk.X)
         self.client_list.pack(fill=tk.Y,expand=1,anchor=tk.NW)
+
+    def lobby_back(self):
+        self.client_list.delete(0,tk.END)
+        self.connector.leave_server()
+        self.hide_lobby()
+        self.show_server_selection()
 
     def hide_lobby(self):
         self.lobbyframe.pack_forget()
@@ -114,8 +123,17 @@ class ClientApplication(tk.Frame):
                 ind = listbox.get(0,tk.END).index(name)
                 listbox.delete(ind)
             except Exception as e:
-                print e
                 return
+
+    def mark_red(self,listbox,name,marking):
+        try:
+            sisu = listbox.get(0,tk.END)
+            ind = listbox.get(0,tk.END).index(name)
+            colour = 'thistle' if marking else 'white'
+            listbox.itemconfig(ind,bg=colour)
+        except Exception as e:
+            Log.debug("Couldn't mark/unmark %r as red.", name)
+            return
 
     def pick_server(self):
         selected = self.server_box.curselection()
@@ -123,7 +141,6 @@ class ClientApplication(tk.Frame):
         if selected and uname:
             serv_name = selected[0]
             self.connector.join_server(self.server_box.get(serv_name),uname)
-            self.hide_server_selection()
 
     def disconnect(self):
         self.connector.disconnect()

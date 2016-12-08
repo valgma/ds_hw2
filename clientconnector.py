@@ -4,7 +4,8 @@ from threading import Thread
 
 import pika
 
-LOBBY_KEYS = ["players.add", "players.remove","gameroom.add","gameroom.remove"]
+LOBBY_KEYS = ["players.add", "players.remove","gameroom.add","gameroom.remove",\
+    "players.busy","players.available"]
 SERVER_KEYS = []
 Log = make_logger()
 GAME_KEYS = ["game.next","game.leader","game.joined","game.left"]
@@ -44,22 +45,18 @@ class ClientConnector(Thread):
         self.room_dec = self.channel.queue_declare(exclusive=True)
         self.room_queue = self.room_dec.method.queue
 
+        self.channel.basic_consume(self.lobby_callback,
+                                queue=self.game_queue)
+        self.channel.basic_consume(self.game_callback,queue=self.room_queue)
+
     def set_server_subscriptions(self,add):
         #listen/forget new declarations of open servers and closing servers
-        if add:
-            self.channel.queue_bind(exchange=SERV_EXCHANGE,
-                               queue=self.lobby_queue,
-                               routing_key='open')
-            self.channel.queue_bind(exchange=SERV_EXCHANGE,
-                                  queue=self.lobby_queue,
-                                  routing_key='closed')
-        else:
-            self.channel.queue_unbind(exchange=SERV_EXCHANGE,
-                               queue=self.lobby_queue,
-                               routing_key='open')
-            self.channel.queue_unbind(exchange=SERV_EXCHANGE,
-                                  queue=self.lobby_queue,
-                                  routing_key='closed')
+        self.channel.queue_bind(exchange=SERV_EXCHANGE,
+                           queue=self.lobby_queue,
+                           routing_key='open')
+        self.channel.queue_bind(exchange=SERV_EXCHANGE,
+                              queue=self.lobby_queue,
+                              routing_key='closed')
 
     def ping_servers(self):
         self.notify_exchange(SERV_EXCHANGE,'ping_open','',self.lobby_reply_prop)
@@ -77,27 +74,32 @@ class ClientConnector(Thread):
         elif body.startswith("players.confirm"):
             msg = body.split(DELIM,2)
             server_name = msg[1]
-            self.connect_game_exchange(server_name)
-            self.set_server_subscriptions(False)
+            self.connect_game_exchange(server_name,True)
             self.app.username = msg[2]
+            self.app.hide_server_selection()
             self.app.show_lobby()
 
-
-    def connect_game_exchange(self,server_name):
+    def connect_game_exchange(self,server_name,connect):
         for key in LOBBY_KEYS:
-            self.channel.queue_bind(exchange=server_name,
-                                    queue=self.game_queue,
-                                    routing_key=key)
-        self.channel.basic_consume(self.lobby_callback,
-                                queue=self.game_queue)
-        self.game_server = server_name
+            if connect:
+                self.channel.queue_bind(exchange=server_name,
+                                        queue=self.game_queue,
+                                        routing_key=key)
+            else:
+                self.channel.queue_unbind(exchange=server_name,
+                                        queue=self.game_queue,
+                                        routing_key=key)
+        if connect:
+            self.game_server = server_name
+        else:
+            self.game_server = None
 
     def join_room_exchange(self,room_name):
         for key in GAME_KEYS:
             self.channel.queue_bind(exchange=room_name,
                                     queue=self.room_queue,
                                     routing_key=key)
-        self.channel.basic_consume(self.game_callback,queue=self.room_queue)
+
 
     def game_callback(self, ch, method, properties, body):
         rk = method.routing_key
@@ -110,6 +112,10 @@ class ClientConnector(Thread):
             self.app.update_client_box(body,True)
         elif rk == 'players.remove':
             self.app.update_client_box(body,False)
+        elif rk == 'players.busy':
+            self.app.mark_red(self.app.client_list,body,True)
+        elif rk == 'players.available':
+            self.app.mark_red(self.app.client_list,body,False)
         elif rk == 'gameroom.add':
             self.app.update_listbox(self.app.lobby_roomlist,body,True)
         elif rk == 'gameroom.remove':
@@ -121,6 +127,7 @@ class ClientConnector(Thread):
             self.app.hide_lobby()
             self.app.draw_game()
             self.join_room_exchange(self.game_server+DELIM+room_name)
+            self.notify_game_server('players.busy',self.app.username)
 
     def join_server(self,serv_name,username):
         self.propose_name(serv_name,username)
@@ -149,8 +156,12 @@ class ClientConnector(Thread):
     def request_roomlist(self):
         self.notify_game_server('gameroom.ping','')
 
+    def leave_server(self):
+        self.notify_game_server('players.remove',self.app.username)
+        self.connect_game_exchange(self.game_server,False)
+
     def disconnect(self):
-        if self.app.username:
+        if self.app.username and self.game_server:
             self.notify_game_server('players.remove',self.app.username)
         self.channel.queue_delete(queue=self.lobby_queue)
         self.connection.close()

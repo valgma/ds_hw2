@@ -17,7 +17,6 @@ class Server():
         self.connect(pikahost)
         self.rooms = {}
 
-
     def connect(self,pikahost):
         #connect to broker
         #TODO: Actually connect outside of localhost
