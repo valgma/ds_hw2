@@ -107,16 +107,15 @@ class ClientApplication(tk.Frame):
 
     def update_listbox(self,listbox,name,add):
         if add:
-            for i in range(listbox.size()):
-                if name == listbox.get(i):
-                    return
-            listbox.insert(tk.END,name)
+            if name not in listbox.get(0,tk.END):
+                listbox.insert(tk.END,name)
         else:
-            for i in range(listbox.size()):
-                val = listbox.get(i)
-                if name == val:
-                    listbox.delete(i)
-                    return
+            try:
+                ind = listbox.get(0,tk.END).index(name)
+                listbox.delete(ind)
+            except Exception as e:
+                print e
+                return
 
     def pick_server(self):
         selected = self.server_box.curselection()
