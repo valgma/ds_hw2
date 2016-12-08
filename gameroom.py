@@ -11,6 +11,7 @@ class Gameroom(Thread):
         Thread.__init__(self)
         self.open = True
         self.players = []
+        self.owner = ""
         self.server = serv
         self.servname = prefix
         self.roomname = title
@@ -48,14 +49,16 @@ class Gameroom(Thread):
         if rk == "game.joined":
             if body not in self.players:
                 self.players.append(body)
+            if not self.owner:
+                self.owner = body
         if rk == "game.sayonara":
             if body in self.players:
                 self.players.remove(body)
             if not self.players:
                 Log.debug("Nuking room %r", self.roomname)
                 self.server.destroy_room(self.roomname)
-            else:
-                print "players:" + str(self.players)
+            if self.owner == body:
+                self.owner = self.players[0]
 
 
     def notify_exchange(self,ex,key,message,props=None):
