@@ -58,7 +58,7 @@ class Gameroom(Thread):
             if not self.players:
                 Log.debug("Nuking room %r", self.roomname)
                 self.server.destroy_room(self.roomname)
-            if self.owner == body:
+            elif self.owner == body:
                 self.owner = self.players[0]
         if rk == "game.requri":
             self.notify_exchange(self.exchange,"game.uri",str(self.uri))
