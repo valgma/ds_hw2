@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 from utils import make_logger
+from threading import Timer
+from gameui import GameUI
 import Tkinter as tk
 from clientconnector import ClientConnector
 
@@ -13,6 +15,7 @@ class ClientApplication(tk.Frame):
         self.pikahost = host
         self.servers = []
         self.username = ""
+        self.game_frame = None
 
         self.create_widgets()
         self.show_server_selection()
@@ -95,8 +98,12 @@ class ClientApplication(tk.Frame):
         self.server_selection_frame.pack_forget()
 
     def draw_game(self):
-        l = tk.Label(self,text="GAME GOES HERE")
-        l.pack()
+        self.game_frame = GameUI(self,self.connector)
+        self.game_frame.show()
+
+    def abandon_game(self):
+        self.destroy_game()
+        self.show_lobby()
 
     def join_game(self):
         print "Dummy!"
@@ -105,6 +112,13 @@ class ClientApplication(tk.Frame):
         name = self.game_name_entry.get()
         if name:
             self.connector.request_room(name)
+
+    def flash_name(self):
+        self.username_entry.configure(bg='orange')
+        Timer(0.4,self.clear_flash).start()
+
+    def clear_flash(self):
+        self.username_entry.configure(bg='white')
 
     def update_server_box(self,serv_name,add):
         self.update_listbox(self.server_box,serv_name,add)
@@ -141,9 +155,15 @@ class ClientApplication(tk.Frame):
         if selected and uname:
             serv_name = selected[0]
             self.connector.join_server(self.server_box.get(serv_name),uname)
+        self.flash_name()
 
     def disconnect(self):
         self.connector.disconnect()
+
+    def destroy_game(self):
+        if self.game_frame:
+            self.game_frame.destroy()
+        self.game_frame = None
 
 app = ClientApplication()
 app.master.title("Battleship 2016")

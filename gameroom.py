@@ -3,14 +3,15 @@ from utils import make_logger, DELIM
 from threading import Thread, Timer
 
 Log = make_logger()
-GAME_KEYS = ["game.next","game.leader","game.joined","game.left"]
-SHUTDOWN = 'gameroom.shutdown'
+GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara"]
+SHUTDOWN = 'gameroom.remove'
 
 class Gameroom(Thread):
-    def __init__(self,pikahost,title,prefix):
+    def __init__(self,pikahost,title,prefix,serv):
         Thread.__init__(self)
         self.open = True
         self.players = []
+        self.server = serv
         self.servname = prefix
         self.roomname = title
         self.exchange=prefix+DELIM+title
@@ -44,6 +45,18 @@ class Gameroom(Thread):
     def game_callback(self, ch, method, properties, body):
         rk = method.routing_key
         Log.debug("Game queue received message %r with key %r" % (body,rk))
+        if rk == "game.joined":
+            if body not in self.players:
+                self.players.append(body)
+        if rk == "game.sayonara":
+            if body in self.players:
+                self.players.remove(body)
+            if not self.players:
+                Log.debug("Nuking room %r", self.roomname)
+                self.server.destroy_room(self.roomname)
+            else:
+                print "players:" + str(self.players)
+
 
     def notify_exchange(self,ex,key,message,props=None):
         if props:

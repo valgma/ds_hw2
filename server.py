@@ -87,7 +87,7 @@ class Server():
                 pass
         elif rk == 'gameroom.add':
             if body not in self.rooms.keys():
-                rm = Gameroom(self.host,body,self.servname)
+                rm = Gameroom(self.host,body,self.servname,self)
                 rm.setDaemon(True)
                 rm.start()
                 self.rooms[body] = rm
@@ -119,6 +119,10 @@ class Server():
     def publish_status(self,running):
         tag = 'open' if running else 'closed'
         self.notify_exchange(SERV_EXCHANGE,tag,self.servname,self.lobby_reply_prop)
+
+    def destroy_room(self,roomname):
+        self.rooms[roomname].disconnect()
+        del self.rooms[roomname]
 
     def run(self):
         self.channel.start_consuming()
