@@ -3,6 +3,9 @@
 import pika
 from gameroom import Gameroom
 from utils import make_logger, SERV_EXCHANGE, DELIM
+from threading import Thread
+from gamestate import GameState
+import Pyro4
 
 Log = make_logger()
 
@@ -15,7 +18,11 @@ class Server():
         self.host = pikahost
         self.connected_clients = []
         self.connect(pikahost)
-        self.rooms = {}
+        self.gamerooms = {}
+        self.objects = {}
+        self.object_handler = ObjectHandler()
+        self.object_handler.setDaemon(True)
+        self.object_handler.start()
 
     def connect(self,pikahost):
         #connect to broker
@@ -86,16 +93,19 @@ class Server():
             except:
                 pass
         elif rk == 'gameroom.add':
-            if body not in self.rooms.keys():
-                rm = Gameroom(self.host,body,self.servname,self)
+            if body not in self.gamerooms.keys():
+                gs = GameState()
+                self.objects[body] = gs
+                uri = self.object_handler.register(gs)
+                rm = Gameroom(self.host,body,self,gs,uri)
                 rm.setDaemon(True)
                 rm.start()
-                self.rooms[body] = rm
+                self.gamerooms[body] = rm
                 returnaddr = properties.reply_to
                 message = "gameroom.confirm"+DELIM+body
                 self.notify_exchange('',returnaddr,message)
         elif rk == 'gameroom.ping':
-            for rm in self.rooms.keys():
+            for rm in self.gamerooms.keys():
                 self.notify_exchange(self.servname,'gameroom.add',rm)
 
     def notify_exchange(self,ex,key,message,props=None):
@@ -121,8 +131,13 @@ class Server():
         self.notify_exchange(SERV_EXCHANGE,tag,self.servname,self.lobby_reply_prop)
 
     def destroy_room(self,roomname):
-        self.rooms[roomname].disconnect()
-        del self.rooms[roomname]
+        try:
+            self.gamerooms[roomname].disconnect()
+            del self.gamerooms[roomname]
+            self.object_handler.unregister(objects[roomname])
+            del objects[roomname]
+        except:
+            return
 
     def run(self):
         self.channel.start_consuming()
@@ -131,3 +146,20 @@ class Server():
         self.channel.exchange_delete(self.servname)
         self.publish_status(False)
         self.channel.close()
+
+class ObjectHandler(Thread):
+    def __init__(self):
+        Thread.__init__(self)
+        self.pyro_daemon = Pyro4.Daemon()
+
+    def run(self):
+        self.pyro_daemon.requestLoop()
+
+    def register(self,inc):
+        return self.pyro_daemon.register(inc)
+
+    def geturi(self,inc):
+        return self.pyro_daemon.geturi(inc)
+
+    def unregister(self,inc):
+        return self.pyro_daemon.unregister(inc)

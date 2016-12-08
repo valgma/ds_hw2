@@ -1,5 +1,6 @@
 from utils import make_logger
 import Tkinter as tk
+import Pyro4
 
 Log = make_logger()
 
@@ -9,6 +10,8 @@ class GameUI(tk.Frame):
         self.connector = cnn
         self.root = master
         self.make()
+        self.gamestate = None
+        self.connector.request_uri()
 
     def make(self):
         self.infobox = tk.Frame(self)
@@ -32,6 +35,13 @@ class GameUI(tk.Frame):
     def add_player(self,name):
         if name not in self.players.get(0,tk.END):
             self.players.insert(tk.END,name)
+
+    def connect_state(self,uri):
+        print "Trying to connect to proxy"
+        self.gamestate = Pyro4.Proxy(uri)
+        for i in self.gamestate.testmethod():
+            print i
+        print "that happened.."
 
     def rem_player(self,name):
         try:

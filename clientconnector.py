@@ -89,8 +89,10 @@ class ClientConnector(Thread):
         Log.debug("Lobby queue received message %r with key %r." % (body,rk))
         if rk == "game.sayonara":
             self.game_ui.rem_player(body)
-        if rk == "game.joined":
+        elif rk == "game.joined":
             self.game_ui.add_player(body)
+        elif rk == "game.uri":
+            self.game_ui.connect_state(body)
 
     def lobby_callback(self, ch, method, properties, body):
         rk = method.routing_key
@@ -110,11 +112,11 @@ class ClientConnector(Thread):
         elif body.startswith("gameroom.confirm"):
             msg = body.split(DELIM)
             room_name = msg[1]
+            self.room_name = self.lobby_server+DELIM+room_name
+            self.connect_exchange(self.room_name,GAME_KEYS,self.game_queue,True)
             self.app.hide_lobby()
             self.app.draw_game()
             self.game_ui = self.app.game_frame
-            self.room_name = self.lobby_server+DELIM+room_name
-            self.connect_exchange(self.room_name,GAME_KEYS,self.game_queue,True)
             self.notify_lobby_server('players.busy',self.app.username)
             self.notify_exchange(self.room_name,"game.joined",self.app.username)
 
@@ -154,7 +156,13 @@ class ClientConnector(Thread):
         self.notify_exchange(self.room_name,"game.sayonara",self.app.username)
         self.connect_exchange(self.room_name,GAME_KEYS,self.game_queue,False)
         self.notify_exchange(self.lobby_server,"players.available",self.app.username)
-        self.room_name = None
+        self.room_name = ""
+
+    def request_uri(self):
+        print "trying to request uri"
+        print "my room name"
+        print self.room_name
+        self.notify_exchange(self.room_name,"game.requri",'')
 
     def disconnect(self):
         if self.app.username and self.lobby_server:
