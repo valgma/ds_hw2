@@ -120,8 +120,11 @@ class ClientApplication(tk.Frame):
         self.show_lobby()
 
     def join_game(self):
-        selection = self.lobby_roomlist.curselection()[0]
-        self.connector.join_room(self.lobby_roomlist.get(selection))
+        try:
+            selection = self.lobby_roomlist.curselection()[0]
+            self.connector.join_room(self.lobby_roomlist.get(selection))
+        except IndexError:
+            return
 
     def host_game(self):
         name = self.game_name_entry.get()
