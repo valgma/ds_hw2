@@ -27,13 +27,12 @@ class ClientApplication(tk.Frame):
 
 
     def create_widgets(self):
-        # ---------- Client tab widgets ----------
         self.create_server_selection()
         self.create_lobby()
         self.pack_server_selection()
-        self.hide_server_selection()
+        #self.hide_server_selection()
         self.pack_lobby()
-        self.hide_lobby()
+        #self.hide_lobby()
         self.pack(fill=tk.BOTH,expand=1)
 
     def create_server_selection(self):
@@ -57,7 +56,6 @@ class ClientApplication(tk.Frame):
 
     def show_server_selection(self):
         self.pack_server_selection()
-        self.connector.ping_servers()
 
     def create_lobby(self):
         self.lobbyframe = tk.Frame(self)
@@ -84,9 +82,13 @@ class ClientApplication(tk.Frame):
         self.lobby_roomlist.pack(fill=tk.BOTH,expand=1)
 
     def show_lobby(self):
+        print "trying to show lobby"
         self.pack_lobby()
+        print "trying to show lobby <- done"
+        print "asking for lists"
         self.connector.request_playerlist()
         self.connector.request_roomlist()
+        print "asking for lists <- done"
 
 
     def make_client_list(self,master):
@@ -106,10 +108,13 @@ class ClientApplication(tk.Frame):
         self.show_server_selection()
 
     def hide_lobby(self):
-        self.lobbyframe.pack_forget()
+        #self.lobbyframe.pack_forget()
+        print "should hide lobby.."
 
     def hide_server_selection(self):
-        self.server_selection_frame.pack_forget()
+        print "hiding ss"
+        #self.server_selection_frame.pack_forget()
+        print "hiding ss <- done"
 
     def draw_game(self):
         self.game_frame = GameUI(self,self.connector)
