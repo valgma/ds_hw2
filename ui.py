@@ -22,7 +22,7 @@ class ClientApplication(tk.Frame):
         self.connector = ClientConnector(host,self)
         self.connector.setDaemon(True)
         self.connector.start()
-        
+
         self.show_server_selection()
 
 
@@ -30,6 +30,10 @@ class ClientApplication(tk.Frame):
         # ---------- Client tab widgets ----------
         self.create_server_selection()
         self.create_lobby()
+        self.pack_server_selection()
+        self.hide_server_selection()
+        self.pack_lobby()
+        self.hide_lobby()
         self.pack(fill=tk.BOTH,expand=1)
 
     def create_server_selection(self):
@@ -43,13 +47,16 @@ class ClientApplication(tk.Frame):
                                         command=self.pick_server,
                                         bg='SeaGreen2')
 
-    def show_server_selection(self):
+    def pack_server_selection(self):
         self.server_selection_frame.pack(fill=tk.BOTH,expand=1)
         self.server_button.pack(fill=tk.X)
         self.username_label.pack()
         self.username_entry.pack(fill=tk.X)
         self.server_box_label.pack()
         self.server_box.pack(fill=tk.BOTH,expand=1)
+
+    def show_server_selection(self):
+        self.pack_server_selection()
         self.connector.ping_servers()
 
     def create_lobby(self):
@@ -64,10 +71,8 @@ class ClientApplication(tk.Frame):
         self.game_name_entry = tk.Entry(self.game_buttonframe)
         self.lobby_roomlist = tk.Listbox(self.gamesframe)
 
-    def show_lobby(self):
+    def pack_lobby(self):
         self.lobby_roomlist.delete(0,tk.END)
-        self.connector.request_playerlist()
-        self.connector.request_roomlist()
         self.lobbyframe.pack(fill=tk.BOTH,side=tk.LEFT,expand=1)
         self.lobby_listframe.pack(fill=tk.Y,side=tk.LEFT)
         self.gamesframe.pack(fill=tk.BOTH,expand=1,side=tk.LEFT, anchor=tk.N)
@@ -77,6 +82,12 @@ class ClientApplication(tk.Frame):
         self.game_name_label.pack(fill=tk.X,side=tk.LEFT,expand=1)
         self.game_name_entry.pack(fill=tk.X,side=tk.LEFT,expand=1)
         self.lobby_roomlist.pack(fill=tk.BOTH,expand=1)
+
+    def show_lobby(self):
+        self.pack_lobby()
+        self.connector.request_playerlist()
+        self.connector.request_roomlist()
+
 
     def make_client_list(self,master):
         self.lobby_buttonarea = tk.Frame(master)
