@@ -28,6 +28,7 @@ class ClientConnector(Thread):
         self.channel = self.connection.channel()
         #connect to server declaration exchange
         self.make_queues()
+        self.channel.exchange_declare(exchange=SERV_EXCHANGE,type='direct')
         self.connect_exchange(SERV_EXCHANGE,SERVER_KEYS,self.server_queue,True)
 
         self.channel.basic_consume(self.server_callback,
