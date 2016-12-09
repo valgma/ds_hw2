@@ -17,7 +17,6 @@ class ClientConnector(Thread):
         self.app = client
         self.lobby_server = ""
         self.connect(pikahost)
-        self.ping_servers()
         self.game_ui = None
         self.room_name = ""
 

@@ -18,11 +18,12 @@ class ClientApplication(tk.Frame):
         self.game_frame = None
 
         self.create_widgets()
-        self.show_server_selection()
 
         self.connector = ClientConnector(host,self)
         self.connector.setDaemon(True)
         self.connector.start()
+        
+        self.show_server_selection()
 
 
     def create_widgets(self):
@@ -49,6 +50,7 @@ class ClientApplication(tk.Frame):
         self.username_entry.pack(fill=tk.X)
         self.server_box_label.pack()
         self.server_box.pack(fill=tk.BOTH,expand=1)
+        self.connector.ping_servers()
 
     def create_lobby(self):
         self.lobbyframe = tk.Frame(self)
