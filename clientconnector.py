@@ -19,7 +19,6 @@ class ClientConnector(Thread):
         self.connect(pikahost)
         self.game_ui = None
         self.room_name = ""
-        self.ping_servers()
 
     def connect(self,pikahost):
         #connect to broker
