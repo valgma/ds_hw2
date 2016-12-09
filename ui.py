@@ -2,7 +2,8 @@
 from utils import make_logger
 from threading import Timer
 from gameui import GameUI
-import Tkinter as tk
+import mtTkinter
+import mtTkinter as tk
 from clientconnector import ClientConnector
 
 Log = make_logger()
