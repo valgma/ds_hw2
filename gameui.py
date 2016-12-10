@@ -1,5 +1,6 @@
 from utils import make_logger
-import Tkinter as tk
+from gamebox import Gamebox
+import mtTkinter.mtTkinter as tk
 import Pyro4
 
 Log = make_logger()
@@ -16,8 +17,7 @@ class GameUI(tk.Frame):
 
     def make(self):
         self.infobox = tk.Frame(self)
-        self.gamebox = tk.Frame(self)
-        self.l = tk.Label(self.gamebox,text="GAME GOES HERE")
+        self.gamebox = Gamebox(self, self.root.username, None, {}) # TODO!
         self.quitbutton = tk.Button(self.infobox,text='Leave game',bg='tomato',command=self.leave_game)
         self.players = tk.Listbox(self.infobox)
         self.connector.get_game_players()
@@ -28,7 +28,6 @@ class GameUI(tk.Frame):
         self.gamebox.pack(side=tk.TOP,fill=tk.BOTH,anchor=tk.N)
         self.quitbutton.pack(fill=tk.X)
         self.players.pack(fill=tk.Y,expand=1)
-        self.l.pack()
 
     def leave_game(self):
         self.connector.leave_game()
