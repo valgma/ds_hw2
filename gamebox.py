@@ -2,7 +2,7 @@ import string
 
 import mtTkinter.mtTkinter as tk
 from random import randint
-from utils import make_logger
+from utils import make_logger, validate_ships
 
 SHIP_COL = 'gray80'
 CELL_EMPTY = 0
@@ -23,7 +23,10 @@ class Gamebox(tk.Frame):
         # other_fileds - name: field dictionary
         tk.Frame.__init__(self, master)
         self.my_name = my_name
+        self.last_click_loc = (None, None, None)  # name, row, col
+        self.clicks_set = set() # holds any number of clicks, could be used to mark ships
 
+        # make sure we have a field to draw
         tmp_field = my_field
         if not tmp_field:
             tmp_field = [[0] * self.cols] * self.rows
@@ -37,11 +40,19 @@ class Gamebox(tk.Frame):
 
         self.draw_fields()
 
+        # buttons in a separate frame
         self.button_frame = tk.Frame(self)
         self.button_frame.grid(row=0, column=2)
-        tk.Button(self.button_frame, text='add field', command=self.add_random_field).grid(row=0, column=0)
-        tk.Button(self.button_frame, text='remove field', command=self.remove_last_field).grid(row=1, column=0)
+        self.entry_input = tk.Entry(self.button_frame)
+        self.entry_input.grid(row=0, column=0)
+        tk.Button(self.button_frame, text='add field', command=self.add_random_field).grid(row=1, column=0)
+        tk.Button(self.button_frame, text='remove field', command=self.remove_named_field).grid(row=2, column=0)
+        tk.Button(self.button_frame, text='enable field', command=self.enable_named_field).grid(row=3, column=0)
+        tk.Button(self.button_frame, text='disable field', command=self.disable_named_field).grid(row=4, column=0)
+        tk.Button(self.button_frame, text='print f', command=self.print_ships).grid(row=5, column=0)
+        tk.Button(self.button_frame, text='validate', command=self.validate_ships).grid(row=6, column=0)
 
+    # draws other players fields, 3 fields in a row
     def draw_fields(self):
         for name, canvas in self.other_canvases.iteritems():
             self.other_canvases[name].grid_remove()
@@ -53,21 +64,29 @@ class Gamebox(tk.Frame):
             self.other_canvases[name].grid(row=row_idx, column=col_idx)
             i += 1
 
-    def remove_last_field(self):
-        sel_name = None
-        for name in self.other_canvases:
-            sel_name = name
+    # for testing
+    def enable_named_field(self):
+        name = self.entry_input.get()
+        self.enable_field(name)
 
+    # for testing
+    def disable_named_field(self):
+        name = self.entry_input.get()
+        self.disable_field(name)
+
+    # for testing
+    def remove_named_field(self):
+        sel_name = self.entry_input.get()
         self.remove_field(sel_name)
 
-
+    # for testing
     def add_random_field(self):
-        name = randint(0, 10)
+        name = self.entry_input.get()
         field = [[randint(0, 5) for _ in range(10)] for _ in range(10)]
         self.add_field(name, field)
 
     def add_field(self, name, field):
-        if name not in self.other_canvases:
+        if name not in self.other_canvases and name != self.my_name:
             self.other_canvases[name] = GameCanvas(self, self.box_edge, self.rows, self.cols, field, name)
             row_idx = int((len(self.other_canvases)-1) / 3) + 1
             col_idx = (len(self.other_canvases)-1) % 3
@@ -100,9 +119,64 @@ class Gamebox(tk.Frame):
         else:
             Log.debug('Do not have player %s' % name)
 
+    def enable_field(self, name):
+        if name == self.my_name:
+            self.my_canvas.enable_input()
+        elif name in self.other_canvases:
+            self.other_canvases[name].enable_input()
+        else:
+            Log.debug('Do not have player %s' % name)
+
+    def disable_field(self, name):
+        if name == self.my_name:
+            self.my_canvas.disable_input()
+        elif name in self.other_canvases:
+            self.other_canvases[name].disable_input()
+        else:
+            Log.debug('Do not have player %s' % name)
+
+    def enable_all_fields(self):
+        for name in self.other_canvases:
+            self.enable_field(name)
+
+    def disable_all_fields(self):
+        for name in self.other_canvases:
+            self.disable_field(name)
+
+    def set_last_click(self, name, row, col):
+        self.last_click_loc = name, row, col
+        if self.last_click_loc not in self.clicks_set:
+            self.clicks_set.add(self.last_click_loc)
+            if name == self.my_name:
+                self.my_canvas.draw_rec(row, col, SHIP_COL)
+        else:
+            self.clicks_set.remove(self.last_click_loc)
+            if name == self.my_name:
+                self.my_canvas.draw_rec(row, col, 'SystemButtonFace')
+
+    def get_last_click(self):
+        return self.last_click_loc
+
+    def clear_clicks(self):
+        self.clicks_set.clear()
+
+    def get_clicks(self, field_name):
+        field = []
+        for name, row, col in self.clicks_set:
+            if name == field_name:
+                field.append((row, col))
+        return field
+
+    def print_ships(self):
+        print self.get_clicks(self.my_name)
+
+    def validate_ships(self):
+        ships = self.get_clicks(self.my_name)
+        return validate_ships(ships, self.rows, self.cols)
 
 class GameCanvas(tk.Canvas):
     def __init__(self, master, box_edge, rows, cols, field, name):
+        self.root = master
         self.box_edge = box_edge
         self.rows = rows
         self.cols = cols
@@ -113,9 +187,6 @@ class GameCanvas(tk.Canvas):
         tk.Canvas.__init__(self, master, width=self.w, height=self.h)
 
         self.create_text((int(cols*box_edge/2), self.box_edge * (self.rows+1)+15), text=self.name)
-
-        # bind mouseclick
-        self.bind("<Button-1>", self.canvas_mouseclick)
 
         # draw grid
         for row in range(self.rows + 2):
@@ -164,16 +235,25 @@ class GameCanvas(tk.Canvas):
         self.create_line(x0, y0, x0+self.box_edge, y0+self.box_edge)
         self.create_line(x0, y0+self.box_edge, x0+self.box_edge, y0)
 
+    def enable_input(self):
+        # bind mouseclick
+        self.bind("<Button-1>", self.canvas_mouseclick)
+        self.draw_rec(-1, -1, 'green')
+
+    def disable_input(self):
+        self.unbind("<Button-1>")
+        self.draw_rec(-1, -1, 'SystemButtonFace')
+
     def canvas_mouseclick(self, event):
         x, y = event.x, event.y
         row = int(y / self.box_edge - 1)
         col = int(x / self.box_edge - 1)
-        self.draw_rec(row, col, "red")
+        self.root.set_last_click(self.name, row, col)
         print str(self.name) + ": " + '%d %d' % (row, col)
 
 if __name__ == '__main__':
-    my_game = [[randint(0, 5) for _ in range(10)] for _ in range(10)]
-    other_games = {i:my_game for i in range(2)}
+    my_game = [[0 for _ in range(10)] for _ in range(10)]
+    other_games = {str(i):[[randint(0, 5) for _ in range(10)] for _ in range(10)] for i in range(2)}
 
     root = tk.Tk()
     root.title("Blah blah")
