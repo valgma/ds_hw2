@@ -30,8 +30,9 @@ class GameUI(tk.Frame):
         self.players.pack(fill=tk.Y,expand=1)
 
     def leave_game(self):
-        self.connector.leave_game()
         self.root.abandon_game()
+        self.connector.leave_game()
+
 
     def add_player(self,name):
         if name not in self.players.get(0,tk.END):

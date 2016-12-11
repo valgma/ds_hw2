@@ -19,7 +19,6 @@ class Gameroom(Thread):
         self.uri = object_uri
         Log.debug("Room %r online." % self.exchange)
         self.connect(pikahost)
-        self.begin()
 
     def connect(self,pikahost):
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(
@@ -75,17 +74,6 @@ class Gameroom(Thread):
 
     def notify_players(self,key,message,props=None):
         self.notify_exchange(self.exchange,key,message,props)
-
-    def begin(self):
-        self.moveRound()
-
-    def moveRound(self):
-        #see on vanast ajast, remake this
-        print "NEXT!"
-        self.notify_players('game.next','blaa')
-        #uncomment this if you want to have a dummy notification every 5 seconds
-        #the real implementation will be running on an event.
-        #Timer(5,self.moveRound).start()
 
     def run(self):
         self.channel.start_consuming()
