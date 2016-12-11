@@ -101,9 +101,9 @@ class ClientApplication(tk.Frame):
 
     def lobby_back(self):
         self.client_list.delete(0,tk.END)
-        self.connector.leave_server()
         self.hide_lobby()
         self.show_server_selection()
+        self.connector.leave_server()
 
     def hide_lobby(self):
         self.lobbyframe.pack_forget()
