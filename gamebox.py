@@ -5,6 +5,7 @@ from random import randint
 from utils import make_logger, validate_ships
 
 SHIP_COL = 'gray80'
+SEA_COL = 'light sky blue'
 CELL_EMPTY = 0
 CELL_SHIP = 1
 CELL_HIT = 2
@@ -247,7 +248,7 @@ class Gamebox(tk.Frame):
         else:
             self.clicks_set.remove(self.last_click_loc)
             if name == self.my_name:
-                self.my_canvas.draw_rec(row, col, 'SystemButtonFace')
+                self.my_canvas.draw_rec(row, col, SEA_COL)
 
     def get_last_click(self):
         return self.last_click_loc
@@ -311,6 +312,8 @@ class GameCanvas(tk.Canvas):
                     self.draw_hit(row, col)
                 elif c == CELL_MISS:
                     self.draw_miss(row, col)
+                else:
+                    self.draw_rec(row, col, SEA_COL)
 
     def draw_miss(self, row, col):
         self.draw_x(row, col)
@@ -340,7 +343,7 @@ class GameCanvas(tk.Canvas):
 
     def disable_input(self):
         self.unbind("<Button-1>")
-        self.draw_rec(-1, -1, 'SystemButtonFace')
+        self.draw_rec(-1, -1, 'red')
 
     def canvas_mouseclick(self, event):
         x, y = event.x, event.y
@@ -357,7 +360,7 @@ if __name__ == '__main__':
 
     root = tk.Tk()
     root.title("Blah blah")
-    mainframe = Gamebox(root, 'myself', 10, my_game, other_games)
+    mainframe = Gamebox(root, 'myself', my_game, other_games)
     mainframe.grid(sticky=(tk.N, tk.W, tk.E, tk.S))
 
     root.mainloop()
