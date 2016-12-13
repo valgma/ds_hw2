@@ -8,7 +8,7 @@ LOBBY_KEYS = ["players.add", "players.remove","gameroom.add","gameroom.remove",\
     "players.busy","players.available","players.ping"]
 SERVER_KEYS = ["open","closed"]
 Log = make_logger()
-GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.uri","game.ping", "game.turn"]
+GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.uri","game.ping","game.start","game.fire"]
 #TODO: Field for ":" and other magic strings
 
 class ClientConnector(Thread):
@@ -98,8 +98,10 @@ class ClientConnector(Thread):
             #can't put it on server side because it might be out of sync..
             if self.game_ui.leader == self.app.username:
                 self.notify_exchange(self.room_name,"game.leader",self.app.username)
-        elif rk == "game.turn":
-            self.game_ui.switch_turn()
+        elif rk == "game.start":
+            self.game_ui.start_game()
+        elif rk == "game.fire":
+            self.game_ui.fire(body)
         elif rk == "game.leader":
             self.game_ui.promote_to_leader(body)
 

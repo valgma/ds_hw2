@@ -44,11 +44,25 @@ class GameUI(tk.Frame):
             self.players.insert(tk.END,name)
             if self.gamebox:
                 self.gamebox.add_empty_field(name)
-                self.gamebox.enable_field(name)
+                if self.gamebox.my_name == name:
+                    self.gamebox.enable_field(name)
+                else:
+                    self.gamebox.disable_field(name)
                 self.gamebox.gamestate.add_player(name)
 
-    def switch_turn(self):
-        self.gamebox.switch_turn()
+    #def switch_turn(self, msg):
+    def fire(self, msg):
+        pieces = msg.split("/")
+        src_name = pieces[0]
+        tgt_name = pieces[1]
+        row = int(pieces[2])
+        col = int(pieces[3])
+        self.gamebox.rcv_fire(src_name, tgt_name, row, col)
+        #self.gamebox.switch_turn()
+
+    def start_game(self):
+        self.gamebox.rcv_start()
+
 
     def connect_state(self,uri):
         if not self.gamestate:

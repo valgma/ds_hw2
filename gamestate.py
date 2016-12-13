@@ -59,6 +59,12 @@ class GameState(object):
         self.turns = list(self.list_players())
         self.turns.remove(name)
 
+    def update_boards(self, name, row, col, value):
+        self.boards[name][row][col] = value
+
+    def update_other_players_boards(self, src_name, tgt_name, row, col, value):
+        self.other_players_boards[src_name][tgt_name][row][col] = value
+
     def add_board(self, name, ships):
         board = [[0 for i in range(self.board_size)] for j in range(self.board_size)] # empty board
         for (row, column) in ships:
@@ -77,23 +83,26 @@ class GameState(object):
         board = self.boards[name]
         ship_cells = set()
         for i in range(row, -1, -1):
-            if board[i][column] == 1:
+            if self.is_ship(board[i][column]):
                 ship_cells.add((i, column))
             else:
                 break
         for i in range(row, self.board_size):
-            if board[i][column] == 1:
+            if self.is_ship(board[i][column]):
                 ship_cells.add((i, column))
             else:
                 break
         for i in range(column, -1, -1):
-            if board[row][i] == 1:
+            if self.is_ship(board[row][i]):
                 ship_cells.add((row, i))
             else:
                 break
         for i in range(column, self.board_size):
-            if board[row][i] == 1:
+            if self.is_ship(board[row][i]):
                 ship_cells.add((row, i))
             else:
                 break
         return ship_cells
+
+    def is_ship(self, cell_value):
+        return cell_value == 1 or cell_value == 2 or cell_value == 4

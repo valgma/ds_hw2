@@ -6,6 +6,7 @@ from utils import make_logger, validate_ships
 
 SHIP_COL = 'gray80'
 SEA_COL = 'light sky blue'
+CRASH_COL = 'red'
 CELL_EMPTY = 0
 CELL_SHIP = 1
 CELL_HIT = 2
@@ -60,75 +61,111 @@ class Gamebox(tk.Frame):
         ready_players_count = self.gamestate.get_ready_players_count()
         if ready and ready_players_count >= 1:
             self.gamestate.init_turns(self.my_name)
-            #TODO: start game with the players who are ready
-            self.message_label.config(text="Game begins. Your turn.")
+            #TODO: start game with only the players who are ready, kick others out
             ships = self.get_clicks(self.my_name)
             self.gamestate.add_board(self.my_name, ships)
             self.gamestate.add_other_players_boards()
-            self.enable_all_fields()
-            self.disable_field(self.my_name)
-            self.startbutton.config(state='disabled')
+            self.startbutton.config(state="disabled")
+            self.master.notify_players("game.start", "")
         elif ready:
             self.message_label.config(text="Not enough players to start.")
         else:
             self.message_label.config(text="Validation failed.")
-        #TODO: lock positioning ships, lock joining the game
 
-    def ready(self):
-        if self.validate_ships():
-            self.gamestate.set_ready(self.my_name)
-            self.message_label.config(text="You're ready")
-            ships = self.get_clicks(self.my_name)
-            self.gamestate.add_board(self.my_name, ships)
-            self.disable_all_fields()
+    def rcv_start(self):
+        turn = self.gamestate.get_turn()
+        if turn == self.my_name:
+            self.message_label.config(text="Game begins. Your turn.")
+            self.enable_all_fields()
             self.disable_field(self.my_name)
-            self.startbutton.config(state='disabled')
         else:
-            self.message_label.config(text="Validation failed.")
+            self.message_label.config(text="Game begins. Waiting for " + turn + ".")
+            self.disable_all_fields()
 
-    def fire(self, src_name, tgt_name, row, column):
+    def fire(self, src_name, tgt_name, row, col):
         boards = self.gamestate.get_boards()
-        other_players_boards = self.gamestate.get_other_players_boards()
-        src_other_players_boards = other_players_boards[src_name]
-        cell_value = boards[tgt_name][row][column]
-        if cell_value == 0:                                                         # empty cell
-            src_other_players_boards[tgt_name][row][column] = 3
-            self.message_label.config(text="You missed!")
-            #TODO: message to tgt that we missed
-        elif cell_value == 1:                                                       # ship
-            boards[tgt_name][row][column] = 2
-            self.message_label.config(text="You hit!")
-            ship_cells = self.gamestate.get_ship_cells(tgt_name, row, column)
-            if all(boards[tgt_name][r][c] == 2 for (r, c) in ship_cells):           # ship sinks
-                self.message_label.config(text="You sunk a ship!")
+        cell_value = boards[tgt_name][row][col]
+        if cell_value == 1:                                         # hit a ship
+            self.gamestate.update_boards(tgt_name, row, col, 2)
+            ship_cells = self.gamestate.get_ship_cells(tgt_name, row, col)
+            print "SHIP:", ship_cells
+            if self.ship_shinks(tgt_name, ship_cells):              # ship sinks
                 players = self.gamestate.list_players()
                 for p in players:
                     if p != tgt_name:
                         for (r, c) in ship_cells:
-                            other_players_boards[p][tgt_name][r][c] = 4
-                #TODO: message to all that this ship has sunk
+                            self.gamestate.update_boards(tgt_name, r, c, 4)
+        print "BOARDS:", self.gamestate.get_boards()
         self.gamestate.switch_turn()
-        self.master.notify_players('game.turn','')
+        self.master.notify_players('game.fire',src_name + "/" + tgt_name + "/" + str(row) + "/" + str(col))
 
+    def rcv_fire(self, src_name, tgt_name, row, col):
+        board = self.gamestate.get_board(tgt_name)
+        value = board[row][col]
+        if self.my_name == src_name:
+            if value == 0:
+                self.message_label.config(text="You missed " + tgt_name + "'s ship!")
+                self.gamestate.update_other_players_boards(src_name, tgt_name, row, col, 3)
+                self.draw_miss(tgt_name, row, col)
+            elif value == 2:
+                self.message_label.config(text="You hit " + tgt_name + "'s ship!")
+                self.gamestate.update_other_players_boards(src_name, tgt_name, row, col, 2)
+                self.draw_hit(tgt_name, row, col)
+            elif value == 4:      #we sunk that ship
+                self.message_label.config(text="You sunk " + tgt_name + "'s ship!")
+                ship_cells = self.gamestate.get_ship_cells(tgt_name, row, col)
+                for (r, c) in ship_cells:
+                    self.gamestate.update_other_players_boards(src_name, tgt_name, row, col, 4)
+                    self.draw_crash(tgt_name, r, c)
+        elif self.my_name == tgt_name:
+            if value == 2:
+                self.message_label.config(text=src_name + " hit your ship!")
+                print "PRE-HIT"
+                self.draw_hit(tgt_name, row, col)
+            elif value == 4:
+                self.message_label.config(text=src_name + " hit and sunk your ship!")
+                ship_cells = self.gamestate.get_ship_cells(tgt_name, row, col)
+                for (r, c) in ship_cells:
+                    self.draw_crash(tgt_name, r, c)
+        else:
+            if value == 4:
+                self.message_label.config(text=src_name + " sunk " + tgt_name + "'s ship!")
+                ship_cells = self.gamestate.get_ship_cells(tgt_name, row, col)
+                for (r, c) in ship_cells:
+                    self.gamestate.update_other_players_boards(self.my_name, tgt_name, row, col, 4)
+                    self.draw_crash(tgt_name, r, c)
+        self.switch_turn()
+
+
+    def ready(self):
+        if self.validate_ships():
+            self.gamestate.set_ready(self.my_name)
+            self.message_label.config(text="You're ready.")
+            ships = self.get_clicks(self.my_name)
+            self.gamestate.add_board(self.my_name, ships)
+            self.disable_all_fields()
+            self.disable_field(self.my_name)
+            self.startbutton.config(state="disabled")
+        else:
+            self.message_label.config(text="Validation failed.")
+
+    def ship_shinks(self, tgt_name, ship_cells):
+        board = self.gamestate.get_board(tgt_name)
+        return all(board[r][c] == 2 for (r, c) in ship_cells)
 
     def switch_turn(self):
-        turn = self.gamestate.get_turn()
+        turn = self.gamestate.get_turn()    # actually already switched in the method fire, here just handling the labels
+        if "Waiting" in self.message_label.cget("text"):
+            s = ""
+        else:
+            s = self.message_label.cget("text") + "\n"
         print "Here, I am", self.my_name, "it's ", turn, "'s turn."
-        #self.gamestate.switch_turn()
         if turn == self.my_name:
-            self.message_label.config(text="Your turn!")
+            self.message_label.config(text=(s + "Your turn!"))
             self.enable_all_fields()
         else:
-            last_turn = self.gamestate.get_last_turn()
-            if self.my_name == last_turn:
-                self.message_label.config(text=(self.message_label.cget("text") + "\nWaiting for player " + turn))
-            else:
-                self.message_label.config(text="Waiting for player " + turn)
+            self.message_label.config(text=(s + "Waiting for " + turn + "."))
             self.disable_all_fields()
-        #TODO: repaint cells
-
-    #def repaint(self): #TODO
-
 
     def add_leader_button(self):
         self.startbutton.config(text='Start game', command=self.start_game)
@@ -201,6 +238,7 @@ class Gamebox(tk.Frame):
 
     def draw_hit(self, name, row, col):
         if name == self.my_name:
+            print "HIT"
             self.my_canvas.draw_hit(row, col)
         elif name in self.other_canvases:
             self.other_canvases[name].draw_hit(row, col)
@@ -208,6 +246,7 @@ class Gamebox(tk.Frame):
             Log.debug('Do not have player %s' % name)
 
     def draw_crash(self, name, row, col):
+        print "CRASH"
         if name == self.my_name:
             self.my_canvas.draw_crash(row, col)
         elif name in self.other_canvases:
@@ -323,6 +362,7 @@ class GameCanvas(tk.Canvas):
         self.draw_x(row, col)
 
     def draw_crash(self, row, col):
+        self.draw_rec(row, col, CRASH_COL)
         self.draw_x(row, col)
 
     def draw_rec(self, row, col, color):
@@ -330,11 +370,11 @@ class GameCanvas(tk.Canvas):
         y0 = (row+1) * self.box_edge
         self.create_rectangle((x0, y0, x0+self.box_edge, y0+self.box_edge), fill=color)
 
-    def draw_x(self, row, col, color='black'):
+    def draw_x(self, row, col):
         x0 = (col+1) * self.box_edge
         y0 = (row+1) * self.box_edge
-        self.create_line(x0, y0, x0+self.box_edge, y0+self.box_edge, fill=color)
-        self.create_line(x0, y0+self.box_edge, x0+self.box_edge, y0, fill=color)
+        self.create_line(x0, y0, x0+self.box_edge, y0+self.box_edge)
+        self.create_line(x0, y0+self.box_edge, x0+self.box_edge, y0)
 
     def enable_input(self):
         # bind mouseclick
@@ -349,10 +389,14 @@ class GameCanvas(tk.Canvas):
         x, y = event.x, event.y
         row = int(y / self.box_edge - 1)
         col = int(x / self.box_edge - 1)
-        self.root.set_last_click(self.name, row, col)
+        if row < self.rows and row >= 0 and col < self.cols and col >= 0:               # creating ships only within bounds
+            self.root.set_last_click(self.name, row, col)
         print str(self.name) + ": " + '%d %d' % (row, col)
-        if self.master.my_name != self.name:
-            self.master.fire(self.master.my_name, self.name, row, col)
+        if self.master.my_name != self.name and row < self.rows and col < self.cols:    # firing only within the bounds of other players' boards
+            tgt_board = self.root.gamestate.get_other_players_boards()[self.master.my_name][self.name]
+            cell_value = tgt_board[row][col]
+            if cell_value < 2:      # if it's 2 (hit by us), 3 (missed by us) or 4 (crashed by anyone), we can't fire there any more
+                self.master.fire(self.master.my_name, self.name, row, col)
 
 if __name__ == '__main__':
     my_game = [[0 for _ in range(10)] for _ in range(10)]
