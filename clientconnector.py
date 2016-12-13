@@ -8,7 +8,7 @@ LOBBY_KEYS = ["players.add", "players.remove","gameroom.add","gameroom.remove",\
     "players.busy","players.available","players.ping"]
 SERVER_KEYS = ["open","closed"]
 Log = make_logger()
-GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.uri","game.ping"]
+GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.uri","game.ping", "game.turn"]
 #TODO: Field for ":" and other magic strings
 
 class ClientConnector(Thread):
@@ -98,6 +98,8 @@ class ClientConnector(Thread):
             #can't put it on server side because it might be out of sync..
             if self.game_ui.leader == self.app.username:
                 self.notify_exchange(self.room_name,"game.leader",self.app.username)
+        elif rk == "game.turn":
+            self.game_ui.switch_turn()
         elif rk == "game.leader":
             self.game_ui.promote_to_leader(body)
 
@@ -150,9 +152,9 @@ class ClientConnector(Thread):
     def request_playerlist(self):
         self.notify_lobby_server('players.ping','')
 
-    def request_room(self,name):
+    def request_room(self, name, size):
         replyprop = pika.BasicProperties(reply_to=self.lobby_queue)
-        self.notify_lobby_server('gameroom.add',name,replyprop)
+        self.notify_lobby_server('gameroom.request',name + "/" + str(size),replyprop)
 
     def join_room(self,name):
         replyprop = pika.BasicProperties(reply_to=self.lobby_queue)

@@ -17,6 +17,7 @@ class Gameroom(Thread):
         self.roomname = title
         self.exchange = self.servname+DELIM+title
         self.uri = object_uri
+        self.gamestate = gameobject
         Log.debug("Room %r online." % self.exchange)
         self.connect(pikahost)
 

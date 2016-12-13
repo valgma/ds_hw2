@@ -10,10 +10,13 @@ class GameUI(tk.Frame):
         tk.Frame.__init__(self,master)
         self.connector = cnn
         self.root = master
-        self.make()
         self.gamestate = None
+        self.gamebox = None
         self.connector.request_uri()
         self.leader = ""
+
+    def notify_players(self,key,message,props=None):
+        self.connector.notify_exchange(self.connector.room_name,key,message,props)
 
     def make(self):
         self.infobox = tk.Frame(self)
@@ -24,6 +27,8 @@ class GameUI(tk.Frame):
 
     def show(self):
         self.pack(fill=tk.BOTH,expand=1)
+
+    def show_boxes(self):
         self.infobox.pack(side=tk.LEFT,fill=tk.Y)
         self.gamebox.pack(side=tk.TOP,fill=tk.BOTH,anchor=tk.N)
         self.quitbutton.pack(fill=tk.X)
@@ -37,14 +42,26 @@ class GameUI(tk.Frame):
     def add_player(self,name):
         if name not in self.players.get(0,tk.END):
             self.players.insert(tk.END,name)
+            if self.gamebox:
+                self.gamebox.add_empty_field(name)
+                self.gamebox.enable_field(name)
+                self.gamebox.gamestate.add_player(name)
+
+    def switch_turn(self):
+        self.gamebox.switch_turn()
 
     def connect_state(self,uri):
         if not self.gamestate:
             self.gamestate = Pyro4.Proxy(uri)
+            self.make()
+            self.show_boxes()
             for i in self.gamestate.testmethod():
                 print i
 
     def promote_to_leader(self,leader):
+        if leader == self.root.username:
+            self.gamebox.add_leader_button()
+        #TODO: if leadership changes, change the button back (self.gamebox.remove_leader_button())
         self.update_leadercolour(leader)
 
     def update_leadercolour(self,leader,colour='pale green'):

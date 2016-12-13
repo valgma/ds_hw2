@@ -9,7 +9,7 @@ import Pyro4
 
 Log = make_logger()
 
-GAME_KEYS = ["players.req","players.ping","players.remove","gameroom.add","gameroom.remove","gameroom.ping",\
+GAME_KEYS = ["players.req","players.ping","players.remove","gameroom.request","gameroom.remove","gameroom.ping",\
                 "gameroom.join"]
 SERVER_KEYS = ["ping_open"]
 
@@ -90,18 +90,22 @@ class Server():
             except:
                 pass
                 
-        elif rk == 'gameroom.add':
-            if body not in self.gamerooms.keys():
-                gs = GameState()
-                self.objects[body] = gs
+        elif rk == 'gameroom.request':
+            pieces = body.split("/")
+            name = pieces[0]
+            board_size = int(pieces[1])
+            if name not in self.gamerooms.keys():
+                gs = GameState(board_size)
+                self.objects[name] = gs
                 uri = self.object_handler.register(gs)
-                rm = Gameroom(self.host,body,self,gs,uri)
+                rm = Gameroom(self.host,name,self,gs,uri)
                 rm.setDaemon(True)
                 rm.start()
-                self.gamerooms[body] = rm
+                self.gamerooms[name] = rm
                 returnaddr = properties.reply_to
-                message = "gameroom.confirm"+DELIM+body
+                message = "gameroom.confirm"+DELIM+name
                 self.notify_exchange('',returnaddr,message)
+                self.notify_exchange(self.servname,'gameroom.add',name)
         elif rk == 'gameroom.ping':
             for rm in self.gamerooms.keys():
                 self.notify_exchange(self.servname,'gameroom.add',rm)

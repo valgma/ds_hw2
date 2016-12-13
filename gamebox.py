@@ -16,15 +16,19 @@ Log = make_logger()
 class Gamebox(tk.Frame):
 
     box_edge = 20  # len of one box on field
-    rows, cols = 10, 10
 
     def __init__(self, master, my_name, my_field, other_fields):
         # my_field - rows x cols matrix
         # other_fileds - name: field dictionary
         tk.Frame.__init__(self, master)
         self.my_name = my_name
+        self.gamestate = master.gamestate
+        board_size = self.gamestate.get_board_size()
+        self.rows = board_size
+        self.cols = board_size
         self.last_click_loc = (None, None, None)  # name, row, col
         self.clicks_set = set() # holds any number of clicks, could be used to mark ships
+        self.message_label = None
 
         # make sure we have a field to draw
         tmp_field = my_field
@@ -45,12 +49,84 @@ class Gamebox(tk.Frame):
         self.button_frame.grid(row=0, column=2)
         self.entry_input = tk.Entry(self.button_frame)
         self.entry_input.grid(row=0, column=0)
-        tk.Button(self.button_frame, text='add field', command=self.add_random_field).grid(row=1, column=0)
-        tk.Button(self.button_frame, text='remove field', command=self.remove_named_field).grid(row=2, column=0)
-        tk.Button(self.button_frame, text='enable field', command=self.enable_named_field).grid(row=3, column=0)
-        tk.Button(self.button_frame, text='disable field', command=self.disable_named_field).grid(row=4, column=0)
-        tk.Button(self.button_frame, text='print f', command=self.print_ships).grid(row=5, column=0)
-        tk.Button(self.button_frame, text='validate', command=self.validate_ships).grid(row=6, column=0)
+        self.startbutton = tk.Button(self.button_frame, text='Ready', command=self.ready)
+        self.startbutton.grid(row=1, column=0)
+        self.message_label = tk.Label(self.button_frame, text="Position your ships!")
+        self.message_label.grid(row=2, column=0)
+        #tk.Button(self.button_frame, text='add field', command=self.add_empty_field).grid(row=1, column=0)
+        #tk.Button(self.button_frame, text='remove field', command=self.remove_named_field).grid(row=2, column=0)
+        #tk.Button(self.button_frame, text='enable field', command=self.enable_named_field).grid(row=3, column=0)
+        #tk.Button(self.button_frame, text='disable field', command=self.disable_named_field).grid(row=4, column=0)
+        #tk.Button(self.button_frame, text='print f', command=self.print_ships).grid(row=5, column=0)
+        #tk.Button(self.button_frame, text='validate', command=self.validate_ships).grid(row=6, column=0)
+
+    def start_game(self):
+        ready = self.validate_ships()
+        ready_players_count = self.gamestate.get_ready_players_count()
+        if ready and ready_players_count >= 1:
+            self.gamestate.set_turn(self.my_name)
+            #TODO: start game with the players who are ready
+            self.message_label.config(text="Game begins. Your turn.")
+            ships = self.get_clicks(self.my_name)
+            self.gamestate.add_board(self.my_name, ships)
+            self.gamestate.add_other_players_boards()
+            self.enable_all_fields()
+            self.disable_field(self.my_name)
+        elif ready:
+            self.message_label.config(text="Not enough players to start.")
+        else:
+            self.message_label.config(text="Validation failed.")
+        #TODO: lock positioning ships, lock joining the game
+
+    def ready(self):
+        if self.validate_ships():
+            self.gamestate.set_ready(self.my_name)
+            self.message_label.config(text="You're ready")
+            ships = self.get_clicks(self.my_name)
+            self.gamestate.add_board(self.my_name, ships)
+            self.disable_all_fields()
+            self.disable_field(self.my_name)
+        else:
+            self.message_label.config(text="Validation failed.")
+
+    def fire(self, src_name, tgt_name, row, column):
+        boards = self.gamestate.get_boards()
+        src_other_players_boards = self.gamestate.get_other_players_boards()[src_name]
+        cell_value = boards[tgt_name][row][column]
+        if cell_value == 0:                                                         # empty cell
+            src_other_players_boards[tgt_name][row][column] = 3
+            self.message_label.config(text="You missed!")
+            #TODO: message to tgt that we missed
+        elif cell_value == 1:                                                       # ship
+            boards[tgt_name][row][column] = 2
+            self.message_label.config(text="You hit!")
+            ship_cells = self.gamestate.get_ship_cells(tgt_name, row, column)
+            if all(boards[tgt_name][r][c] == 2 for (r, c) in ship_cells):           # ship sinks
+                players = self.gamestate.list_players()
+                for p in players:
+                    for (r, c) in ship_cells:
+                        src_other_players_boards[p][tgt_name][r][c] = 4
+                #TODO: message to all that this ship has sunk
+        self.master.connector.notify_lobby_server('game.turn','')
+
+
+    def switch_turn(self):
+        self.gamestate.switch_turn()
+        if self.gamestate.turn == self.my_name:
+            self.message_label.config("Your turn!")
+            self.enable_all_fields()
+        else:
+            self.message_label.config("Waiting for player " + self.gamestate.get_turn)
+            self.disable_all_fields()
+        #TODO: repaint cells
+
+    def add_leader_button(self):
+        self.startbutton.config(text='Start game', command=self.start_game)
+
+    def remove_leader_button(self):
+        self.startbutton.config(text='Ready', command=self.ready)
+        self.startbutton.grid(row=1, column=0)
+
 
     # draws other players fields, 3 fields in a row
     def draw_fields(self):
@@ -65,13 +141,11 @@ class Gamebox(tk.Frame):
             i += 1
 
     # for testing
-    def enable_named_field(self):
-        name = self.entry_input.get()
+    def enable_named_field(self, name):
         self.enable_field(name)
 
     # for testing
-    def disable_named_field(self):
-        name = self.entry_input.get()
+    def disable_named_field(self, name):
         self.disable_field(name)
 
     # for testing
@@ -82,7 +156,11 @@ class Gamebox(tk.Frame):
     # for testing
     def add_random_field(self):
         name = self.entry_input.get()
-        field = [[randint(0, 5) for _ in range(10)] for _ in range(10)]
+        field = [[randint(0, 5) for _ in range(self.rows)] for _ in range(self.cols)]
+        self.add_field(name, field)
+
+    def add_empty_field(self, name):
+        field = [[0 for _ in range(self.rows)] for _ in range(self.cols)]
         self.add_field(name, field)
 
     def add_field(self, name, field):
@@ -250,6 +328,8 @@ class GameCanvas(tk.Canvas):
         col = int(x / self.box_edge - 1)
         self.root.set_last_click(self.name, row, col)
         print str(self.name) + ": " + '%d %d' % (row, col)
+        if self.master.my_name != self.name:
+            self.master.fire(self.master.my_name, self.name, row, col)
 
 if __name__ == '__main__':
     my_game = [[0 for _ in range(10)] for _ in range(10)]
@@ -257,7 +337,7 @@ if __name__ == '__main__':
 
     root = tk.Tk()
     root.title("Blah blah")
-    mainframe = Gamebox(root, 'myself', my_game, other_games)
+    mainframe = Gamebox(root, 'myself', 10, my_game, other_games)
     mainframe.grid(sticky=(tk.N, tk.W, tk.E, tk.S))
 
     root.mainloop()

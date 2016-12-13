@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 from utils import make_logger
 from threading import Timer
 from gameui import GameUI
@@ -69,6 +70,9 @@ class ClientApplication(tk.Frame):
         self.lobby_hostbutton = tk.Button(self.game_buttonframe,text="Create Game",command=self.host_game)
         self.game_name_label = tk.Label(self.game_buttonframe,text='Game name:')
         self.game_name_entry = tk.Entry(self.game_buttonframe)
+        self.game_size_label = tk.Label(self.game_buttonframe,text='Game size:')
+        self.game_size_entry = tk.Entry(self.game_buttonframe)
+        self.game_size_entry.insert(0, '10')
         self.lobby_roomlist = tk.Listbox(self.gamesframe)
 
     def pack_lobby(self):
@@ -81,6 +85,8 @@ class ClientApplication(tk.Frame):
         self.lobby_hostbutton.pack(fill=tk.X, side=tk.LEFT,expand=1)
         self.game_name_label.pack(fill=tk.X,side=tk.LEFT,expand=1)
         self.game_name_entry.pack(fill=tk.X,side=tk.LEFT,expand=1)
+        self.game_size_label.pack(fill=tk.X,side=tk.LEFT,expand=1)
+        self.game_size_entry.pack(fill=tk.X,side=tk.LEFT,expand=1)
         self.lobby_roomlist.pack(fill=tk.BOTH,expand=1)
 
     def show_lobby(self):
@@ -128,8 +134,9 @@ class ClientApplication(tk.Frame):
 
     def host_game(self):
         name = self.game_name_entry.get()
-        if name:
-            self.connector.request_room(name)
+        size = self.game_size_entry.get()
+        if name and size: #TODO kontrolli, et numbriline
+            self.connector.request_room(name, size)
 
     def flash_name(self):
         self.username_entry.configure(bg='orange')
