@@ -47,24 +47,18 @@ class Gamebox(tk.Frame):
         # buttons in a separate frame
         self.button_frame = tk.Frame(self)
         self.button_frame.grid(row=0, column=2)
-        self.entry_input = tk.Entry(self.button_frame)
-        self.entry_input.grid(row=0, column=0)
+        #self.entry_input = tk.Entry(self.button_frame)
+        #self.entry_input.grid(row=0, column=0)
         self.startbutton = tk.Button(self.button_frame, text='Ready', command=self.ready)
         self.startbutton.grid(row=1, column=0)
         self.message_label = tk.Label(self.button_frame, text="Position your ships!")
         self.message_label.grid(row=2, column=0)
-        #tk.Button(self.button_frame, text='add field', command=self.add_empty_field).grid(row=1, column=0)
-        #tk.Button(self.button_frame, text='remove field', command=self.remove_named_field).grid(row=2, column=0)
-        #tk.Button(self.button_frame, text='enable field', command=self.enable_named_field).grid(row=3, column=0)
-        #tk.Button(self.button_frame, text='disable field', command=self.disable_named_field).grid(row=4, column=0)
-        #tk.Button(self.button_frame, text='print f', command=self.print_ships).grid(row=5, column=0)
-        #tk.Button(self.button_frame, text='validate', command=self.validate_ships).grid(row=6, column=0)
 
     def start_game(self):
         ready = self.validate_ships()
         ready_players_count = self.gamestate.get_ready_players_count()
         if ready and ready_players_count >= 1:
-            self.gamestate.set_turn(self.my_name)
+            self.gamestate.init_turns(self.my_name)
             #TODO: start game with the players who are ready
             self.message_label.config(text="Game begins. Your turn.")
             ships = self.get_clicks(self.my_name)
@@ -72,6 +66,7 @@ class Gamebox(tk.Frame):
             self.gamestate.add_other_players_boards()
             self.enable_all_fields()
             self.disable_field(self.my_name)
+            self.startbutton.config(state='disabled')
         elif ready:
             self.message_label.config(text="Not enough players to start.")
         else:
@@ -86,12 +81,14 @@ class Gamebox(tk.Frame):
             self.gamestate.add_board(self.my_name, ships)
             self.disable_all_fields()
             self.disable_field(self.my_name)
+            self.startbutton.config(state='disabled')
         else:
             self.message_label.config(text="Validation failed.")
 
     def fire(self, src_name, tgt_name, row, column):
         boards = self.gamestate.get_boards()
-        src_other_players_boards = self.gamestate.get_other_players_boards()[src_name]
+        other_players_boards = self.gamestate.get_other_players_boards()
+        src_other_players_boards = other_players_boards[src_name]
         cell_value = boards[tgt_name][row][column]
         if cell_value == 0:                                                         # empty cell
             src_other_players_boards[tgt_name][row][column] = 3
@@ -102,23 +99,35 @@ class Gamebox(tk.Frame):
             self.message_label.config(text="You hit!")
             ship_cells = self.gamestate.get_ship_cells(tgt_name, row, column)
             if all(boards[tgt_name][r][c] == 2 for (r, c) in ship_cells):           # ship sinks
+                self.message_label.config(text="You sunk a ship!")
                 players = self.gamestate.list_players()
                 for p in players:
-                    for (r, c) in ship_cells:
-                        src_other_players_boards[p][tgt_name][r][c] = 4
+                    if p != tgt_name:
+                        for (r, c) in ship_cells:
+                            other_players_boards[p][tgt_name][r][c] = 4
                 #TODO: message to all that this ship has sunk
-        self.master.connector.notify_lobby_server('game.turn','')
+        self.gamestate.switch_turn()
+        self.master.notify_players('game.turn','')
 
 
     def switch_turn(self):
-        self.gamestate.switch_turn()
-        if self.gamestate.turn == self.my_name:
-            self.message_label.config("Your turn!")
+        turn = self.gamestate.get_turn()
+        print "Here, I am", self.my_name, "it's ", turn, "'s turn."
+        #self.gamestate.switch_turn()
+        if turn == self.my_name:
+            self.message_label.config(text="Your turn!")
             self.enable_all_fields()
         else:
-            self.message_label.config("Waiting for player " + self.gamestate.get_turn)
+            last_turn = self.gamestate.get_last_turn()
+            if self.my_name == last_turn:
+                self.message_label.config(text=(self.message_label.cget("text") + "\nWaiting for player " + turn))
+            else:
+                self.message_label.config(text="Waiting for player " + turn)
             self.disable_all_fields()
         #TODO: repaint cells
+
+    #def repaint(self): #TODO
+
 
     def add_leader_button(self):
         self.startbutton.config(text='Start game', command=self.start_game)
@@ -194,6 +203,14 @@ class Gamebox(tk.Frame):
             self.my_canvas.draw_hit(row, col)
         elif name in self.other_canvases:
             self.other_canvases[name].draw_hit(row, col)
+        else:
+            Log.debug('Do not have player %s' % name)
+
+    def draw_crash(self, name, row, col):
+        if name == self.my_name:
+            self.my_canvas.draw_crash(row, col)
+        elif name in self.other_canvases:
+            self.other_canvases[name].draw_crash(row, col)
         else:
             Log.debug('Do not have player %s' % name)
 
@@ -302,16 +319,19 @@ class GameCanvas(tk.Canvas):
         self.draw_rec(row, col, SHIP_COL)
         self.draw_x(row, col)
 
+    def draw_crash(self, row, col):
+        self.draw_x(row, col)
+
     def draw_rec(self, row, col, color):
         x0 = (col+1) * self.box_edge
         y0 = (row+1) * self.box_edge
         self.create_rectangle((x0, y0, x0+self.box_edge, y0+self.box_edge), fill=color)
 
-    def draw_x(self, row, col):
+    def draw_x(self, row, col, color='black'):
         x0 = (col+1) * self.box_edge
         y0 = (row+1) * self.box_edge
-        self.create_line(x0, y0, x0+self.box_edge, y0+self.box_edge)
-        self.create_line(x0, y0+self.box_edge, x0+self.box_edge, y0)
+        self.create_line(x0, y0, x0+self.box_edge, y0+self.box_edge, fill=color)
+        self.create_line(x0, y0+self.box_edge, x0+self.box_edge, y0, fill=color)
 
     def enable_input(self):
         # bind mouseclick

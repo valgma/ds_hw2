@@ -1,5 +1,4 @@
 import Pyro4
-import Queue
 
 @Pyro4.expose
 class GameState(object):
@@ -10,7 +9,7 @@ class GameState(object):
         self.other_players_boards = {}
         self.ready_players = set()
         self.turn = ""
-        self.turns = Queue.Queue()
+        self.turns = []
 
     def list_players(self):
         return self.players
@@ -39,15 +38,26 @@ class GameState(object):
     def set_ready(self, name):
         self.ready_players.add(name)
 
-    def set_turn(self, name):
-        self.turn = name
+    def get_turn(self):
+        return self.turn
+
+    def get_last_turn(self):
+        return self.turns[len(self.turns)-1]
 
     def switch_turn(self):
-        self.turns.put(self.turn)
-        self.turn = self.turns.get()
+        self.turns.append(self.turn)
+        self.turn = self.turns[0]
+        self.turns.pop(0)
+        #self.turns.put(self.turn)
+        #self.turn = self.turns.get()
 
     def get_ready_players_count(self):
         return len(self.ready_players)
+
+    def init_turns(self, name):
+        self.turn = name
+        self.turns = list(self.list_players())
+        self.turns.remove(name)
 
     def add_board(self, name, ships):
         board = [[0 for i in range(self.board_size)] for j in range(self.board_size)] # empty board
@@ -56,9 +66,7 @@ class GameState(object):
         self.boards[name] = board
 
     def add_other_players_boards(self):
-        print "PLAYERS:", self.players
         for player in self.players:
-            print "PLAYER SIIN", player
             other_players_boards = {}
             for other_player in self.players:
                 if player != other_player:
