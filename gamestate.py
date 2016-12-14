@@ -40,9 +40,8 @@ class GameState(object):
         return self.boards
 
     def restart(self):
-        self.players = set()
+        self.players = self.players.union(self.spectators)
         self.spectators = set()
-        self.turns = []
         self.boards = {}
         self.other_players_boards = {}
 
@@ -76,8 +75,10 @@ class GameState(object):
         return len(self.ready_players)
 
     def init_turns(self, name):
+        print "Players:", self.list_players()
         self.turn = name
         self.turns = list(self.list_players())
+        print "Turns:", self.turns
         self.turns.remove(name)
 
     def update_boards(self, name, row, col, value):

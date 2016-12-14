@@ -189,8 +189,8 @@ class Gamebox(tk.Frame):
         self.startbutton.config(state="normal")
         self.message_label.config(text="Position your ships!")
         self.clear_clicks()
-        self.draw_fields()
-
+        #self.draw_fields()
+        #TODO: clear canvases
 
     def draw_spectator_boards(self):
         players = self.gamestate.list_players()
