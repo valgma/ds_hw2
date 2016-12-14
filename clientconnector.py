@@ -64,6 +64,11 @@ class ClientConnector(Thread):
             self.app.update_server_box(body,True)
         elif rk == 'closed':
             self.app.update_server_box(body,False)
+        elif body.startswith("players.reject"):
+            msg = body.split(DELIM,2)
+            server = msg[1]
+            name = msg[2]
+            self.app.notify_rejection(server,name)
         elif body.startswith("players.confirm"):
             msg = body.split(DELIM,2)
             server_name = msg[1]
@@ -162,7 +167,7 @@ class ClientConnector(Thread):
 
     def request_room(self, name, size):
         replyprop = pika.BasicProperties(reply_to=self.lobby_queue)
-        self.notify_lobby_server('gameroom.request',name + "/" + str(size),replyprop)
+        self.notify_lobby_server('gameroom.request',name + DELIM + str(size),replyprop)
 
     def join_room(self,name):
         replyprop = pika.BasicProperties(reply_to=self.lobby_queue)

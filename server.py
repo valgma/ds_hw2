@@ -79,17 +79,19 @@ class Server():
         Log.debug("Game queue received message %r with key %r" % (body,rk))
 
         if rk == 'players.req':
+            target = properties.reply_to
             if body not in self.connected_clients:
                 self.connected_clients.append(body)
-                target_queue = properties.reply_to
-                self.accept_player(body,target_queue)
-
+                self.notify_exchange(self.servname,'players.add',body)
+                self.notify_exchange('',target,'players.confirm'+DELIM+self.servname+DELIM+body)
+            else:
+                self.notify_exchange('',target,'players.reject'+DELIM+self.servname+DELIM+body)
         elif rk == 'players.remove':
             try:
                 self.connected_clients.remove(body)
             except:
                 pass
-                
+
         elif rk == 'gameroom.request':
             pieces = body.split("/")
             name = pieces[0]
@@ -124,10 +126,6 @@ class Server():
         else:
             Log.debug("Sending exchange %r message %r with key %r." % (ex,message,key))
             self.channel.basic_publish(exchange=ex,routing_key=key,body=message)
-
-    def accept_player(self,player_name,target):
-        self.notify_exchange(self.servname,'players.add',player_name)
-        self.notify_exchange('',target,'players.confirm'+DELIM+self.servname+DELIM+player_name)
 
     def lobby_queue_callback(self, ch, method, properties, body):
         rk = method.routing_key

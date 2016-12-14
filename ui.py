@@ -5,6 +5,7 @@ from threading import Timer
 from gameui import GameUI
 import mtTkinter.mtTkinter as tk
 from clientconnector import ClientConnector
+import tkMessageBox
 
 Log = make_logger()
 
@@ -189,6 +190,10 @@ class ClientApplication(tk.Frame):
         if self.game_frame:
             self.game_frame.destroy()
         self.game_frame = None
+
+    def notify_rejection(self,servername,username):
+        tkMessageBox.showerror("Invalid name!","Server "+servername+" has rejected the name "+username+".")
+
 
 app = ClientApplication()
 app.master.title("Battleship 2016")
