@@ -180,10 +180,18 @@ class Gamebox(tk.Frame):
 
     def restart_game(self):
         self.resetbutton.grid_forget()
+        self.my_canvas.clear()
+        for name, canv in self.other_canvases.iteritems():
+            canv.clear()
+
         self.gamestate.restart()
         self.master.notify_players("game.restart", "")
 
     def rcv_restart_game(self):
+        self.my_canvas.clear()
+        for name, canv in self.other_canvases.iteritems():
+            canv.clear()
+
         self.disable_all_fields()
         self.enable_field(self.my_name)
         self.startbutton.config(state="normal")
@@ -251,25 +259,6 @@ class Gamebox(tk.Frame):
             col_idx = i % 3
             self.other_canvases[name].grid(row=row_idx, column=col_idx)
             i += 1
-
-    # for testing
-    def enable_named_field(self, name):
-        self.enable_field(name)
-
-    # for testing
-    def disable_named_field(self, name):
-        self.disable_field(name)
-
-    # for testing
-    def remove_named_field(self):
-        sel_name = self.entry_input.get()
-        self.remove_field(sel_name)
-
-    # for testing
-    def add_random_field(self):
-        name = self.entry_input.get()
-        field = [[randint(0, 5) for _ in range(self.rows)] for _ in range(self.cols)]
-        self.add_field(name, field)
 
     def add_empty_field(self, name):
         field = [[0 for _ in range(self.rows)] for _ in range(self.cols)]
@@ -472,6 +461,12 @@ class GameCanvas(tk.Canvas):
             cell_value = tgt_board[row][col]
             if cell_value < 2:      # if it's 2 (hit by us), 3 (missed by us) or 4 (crashed by anyone), we can't fire there any more
                 self.master.fire(self.master.my_name, self.name, row, col)
+
+    def clear(self):
+        for row in range(self.rows):
+            for col in range(self.cols):
+                self.draw_rec(row, col, SEA_COL)
+
 
 if __name__ == '__main__':
     my_game = [[0 for _ in range(10)] for _ in range(10)]
