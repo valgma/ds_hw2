@@ -8,7 +8,7 @@ LOBBY_KEYS = ["players.add", "players.remove","gameroom.add","gameroom.remove",\
     "players.busy","players.available","players.ping"]
 SERVER_KEYS = ["open","closed"]
 Log = make_logger()
-GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.uri","game.ping","game.start","game.fire"]
+GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.uri","game.ping","game.start","game.fire","game.all_sunk","game.over","game.restart"]
 #TODO: Field for ":" and other magic strings
 
 class ClientConnector(Thread):
@@ -102,6 +102,12 @@ class ClientConnector(Thread):
             self.game_ui.start_game()
         elif rk == "game.fire":
             self.game_ui.fire(body)
+        elif rk == "game.all_sunk":
+            self.game_ui.gamebox.rcv_all_sunk(body)
+        elif rk == "game.over":
+            self.game_ui.gamebox.rcv_game_over(body)
+        elif rk == "game.restart":
+            self.game_ui.gamebox.rcv_restart_game()
         elif rk == "game.leader":
             self.game_ui.promote_to_leader(body)
 

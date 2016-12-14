@@ -10,12 +10,22 @@ class GameState(object):
         self.ready_players = set()
         self.turn = ""
         self.turns = []
+        self.game_on = False
+        self.spectators = set()
 
     def list_players(self):
         return self.players
 
     def add_player(self, name):
         self.players.add(name)
+
+    def remove_player(self, name):
+        if name in self.players:
+            self.players.remove(name)
+        if self.turn == name:   #TODO: check if it's necessary or already covered
+            self.switch_turn()
+        if name in self.turns:
+            self.turns.remove(name)
 
     def get_board_size(self):
         return self.board_size
@@ -29,8 +39,21 @@ class GameState(object):
     def get_boards(self):
         return self.boards
 
+    def restart(self):
+        self.players = set()
+        self.spectators = set()
+        self.turns = []
+        self.boards = {}
+        self.other_players_boards = {}
+
     def get_other_players_boards(self):
         return self.other_players_boards
+
+    def get_game_on(self):
+        return self.game_on
+
+    def set_game_on(self, value):
+        self.game_on = value
 
     def testmethod(self):
         return "this method tests if you can get stuff from uri fine.".split()
@@ -41,15 +64,13 @@ class GameState(object):
     def get_turn(self):
         return self.turn
 
-    def get_last_turn(self):
-        return self.turns[len(self.turns)-1]
-
     def switch_turn(self):
         self.turns.append(self.turn)
         self.turn = self.turns[0]
         self.turns.pop(0)
-        #self.turns.put(self.turn)
-        #self.turn = self.turns.get()
+
+    def is_ready(self, name):
+        return name in self.ready_players
 
     def get_ready_players_count(self):
         return len(self.ready_players)
@@ -72,7 +93,7 @@ class GameState(object):
         self.boards[name] = board
 
     def add_other_players_boards(self):
-        for player in self.players:
+        for player in self.ready_players:
             other_players_boards = {}
             for other_player in self.players:
                 if player != other_player:
@@ -106,3 +127,9 @@ class GameState(object):
 
     def is_ship(self, cell_value):
         return cell_value == 1 or cell_value == 2 or cell_value == 4
+
+    def is_spectator(self, name):
+        return name in self.spectators
+
+    def add_spectator(self, name):
+        self.spectators.add(name)

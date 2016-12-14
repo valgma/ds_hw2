@@ -37,7 +37,7 @@ class GameUI(tk.Frame):
     def leave_game(self):
         self.root.abandon_game()
         self.connector.leave_game()
-
+        self.gamebox.gamestate.remove_player(self.gamebox.my_name)
 
     def add_player(self,name):
         if name not in self.players.get(0,tk.END):
@@ -96,5 +96,13 @@ class GameUI(tk.Frame):
         try:
             ind = self.players.get(0,tk.END).index(name)
             self.players.delete(ind)
+            self.gamebox.remove_field(name)
+            self.gamebox.gamestate.remove_player(name)
+            players = self.gamebox.gamestate.list_players()
+            if len(players) < 2:
+                print "GAME OVER"
+                #TODO: only 1 player - kick everybody out
+            else:
+                self.notify_players("game.leader", list(players)[0])
         except Exception as e:
             return
