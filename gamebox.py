@@ -339,8 +339,35 @@ class Gamebox(tk.Frame):
                     # only draw unhit ships - missed hits are unnecessary and sunk ships are already visible in our window
                     if value == 1:
                         self.draw_ship(p, row, col)
+    def resume(self):
+        while True:
+            if self.gamestate:
+                self.startbutton.config(state="disabled")
+                self.draw_resume_boards()
+                if self.gamestate and self.gamestate.get_turn == self.my_name:
+                    self.enable_all_fields()
+                    self.disable_field(self.my_name)
+                else:
+                    self.disable_all_fields()
+                self.message_label.config(text="Resume successful!")
+
+                return
 
     def draw_resume_boards(self):
+        opb = self.gamestate.other_players_boards()
+        my_vision = opb[self.my_name]
+        for p in my_vision.keys():
+            board = my_vision[p]
+            for row in range(self.rows):
+                for col in range(self.cols):
+                    value = board[row][col]
+                    if value == 2:
+                        self.draw_hit(p,row,col)
+                    if value == 3:
+                        self.draw_miss(p,row,col)
+                    if value == 4:
+                        self.draw_crash(p,row,col)
+
         players = self.gamestate.list_players()
         for p in players:
             board = self.gamestate.get_board(p)
