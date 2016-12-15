@@ -1,6 +1,8 @@
 import logging
 SERV_EXCHANGE = 'servers'
 DELIM = "/"
+KEEPALIVE = 10
+TIMEOUT = KEEPALIVE*3
 
 def make_logger():
     FORMAT = '%(asctime)-15s %(levelname)s %(message)s'

@@ -6,14 +6,15 @@ from gameui import GameUI
 import mtTkinter.mtTkinter as tk
 from clientconnector import ClientConnector
 import tkMessageBox
+import sys
 
 Log = make_logger()
 
 #TODO: Don't allow ":" in names
 
 class ClientApplication(tk.Frame):
-    def __init__(self,master=None,host='localhost'):
-        tk.Frame.__init__(self,master)
+    def __init__(self,host='localhost'):
+        tk.Frame.__init__(self,None)
         self.pikahost = host
         self.servers = []
         self.username = ""
@@ -197,8 +198,10 @@ class ClientApplication(tk.Frame):
     def notify_closed(self,room):
         tkMessageBox.showerror("Can't join game!","Room "+room+" is currently in a running game which does not contain you.")
 
-
-app = ClientApplication()
+host = "localhost"
+if len(sys.argv) > 1:
+    host = sys.argv[1]
+app = ClientApplication(host)
 app.master.title("Battleship 2016")
 app.mainloop()
 app.disconnect()

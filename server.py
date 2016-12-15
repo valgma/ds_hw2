@@ -5,12 +5,13 @@ from gameroom import Gameroom
 from utils import make_logger, SERV_EXCHANGE, DELIM
 from threading import Thread
 from gamestate import GameState
+from keepalive import KeepAliveListener
 import Pyro4
 
 Log = make_logger()
 
 GAME_KEYS = ["players.req","players.ping","players.remove","gameroom.request","gameroom.remove","gameroom.ping",\
-                "gameroom.join"]
+                "gameroom.join","players.disconnected","players.alive"]
 SERVER_KEYS = ["ping_open"]
 
 class Server():
@@ -19,6 +20,9 @@ class Server():
         self.host = pikahost
         self.connected_clients = []
         self.connect(pikahost)
+
+        self.kal = KeepAliveListener(self.channel,self.servname)
+
         self.gamerooms = {}
         self.objects = {}
         self.object_handler = ObjectHandler()
@@ -27,9 +31,9 @@ class Server():
 
     def connect(self,pikahost):
         #connect to broker
-        #TODO: Actually connect outside of localhost
-        self.connection = pika.BlockingConnection(pika.ConnectionParameters(
-                host=pikahost))
+        credentials = pika.PlainCredentials('DSHW2', 'DSHW2')
+        parameters = pika.ConnectionParameters(pikahost,5672,'/',credentials)
+        self.connection = pika.BlockingConnection(parameters)
         self.channel = self.connection.channel()
 
         self.declare_exchanges()
@@ -84,6 +88,7 @@ class Server():
                 self.connected_clients.append(body)
                 self.notify_exchange(self.servname,'players.add',body)
                 self.notify_exchange('',target,'players.confirm'+DELIM+self.servname+DELIM+body)
+                self.kal.add_client(body)
             else:
                 self.notify_exchange('',target,'players.reject'+DELIM+self.servname+DELIM+body)
         elif rk == 'players.remove':
@@ -91,7 +96,10 @@ class Server():
                 self.connected_clients.remove(body)
             except:
                 pass
-
+        elif rk == "players.disconnected":
+            self.notify_exchange(self.servname,'players.remove',body)
+        elif rk == "players.alive":
+            self.kal.poke_client(body)
         elif rk == 'gameroom.request':
             pieces = body.split("/")
             name = pieces[0]
