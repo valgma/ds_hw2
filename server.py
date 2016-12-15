@@ -14,7 +14,15 @@ GAME_KEYS = ["players.req","players.ping","players.remove","gameroom.request","g
                 "gameroom.join","players.disconnected","players.alive"]
 SERVER_KEYS = ["ping_open"]
 
+"""
+The main server class
+"""
 class Server():
+    """
+    @param pikahost - the rabbitmq server
+    @param title - the server's name
+    @param external_host - the server's external IP
+    """
     def __init__(self,pikahost,title,external_host):
         self.servname = title
         self.host = pikahost
@@ -31,6 +39,10 @@ class Server():
         self.object_handler.setDaemon(True)
         self.object_handler.start()
 
+    """
+    Initializing the connection
+    @param pikahost - the rabbitmq server
+    """
     def connect(self,pikahost):
         #connect to broker
         credentials = pika.PlainCredentials('DSHW2', 'DSHW2')
@@ -45,11 +57,21 @@ class Server():
         #publish own channel in servers
         self.publish_status(True)
 
+    """
+    Initializing the exchanges. The exchange that the server uses is the same
+    as its name.
+    """
     def declare_exchanges(self):
         self.channel.exchange_declare(exchange=SERV_EXCHANGE,type='direct')
         #create server exchange
         self.channel.exchange_declare(exchange=self.servname,type='direct')
 
+    """
+    Initializing the queues
+    Again we have different types of queues
+    The server queue, which handles the comings and goings of servers
+    The lobby queue, where rooms and players come and go
+    """
     def make_queues(self):
         #create lobby queue
         self.dec_result = self.channel.queue_declare(exclusive=True)
@@ -60,6 +82,9 @@ class Server():
         self.game_dec = self.channel.queue_declare(exclusive=True)
         self.game_queue = self.game_dec.method.queue
 
+    """
+    Initializing all the queue bindings of the routing keys
+    """
     def bind_queues(self):
         #listen to clients asking for server list
         for k in SERVER_KEYS:
@@ -80,6 +105,11 @@ class Server():
         self.channel.basic_consume(self.game_queue_callback,
                         queue=self.game_queue)
 
+    """
+    The main lobby callback method (nevermind the name).
+    This handles events regarding the comings/goings of servers and players.
+    Also handles player and room join/creation requests.
+    """
     def game_queue_callback(self, ch, method, properties, body):
         rk = method.routing_key
         Log.info("Lobby queue received message %r with key %r" % (body,rk))
@@ -139,6 +169,9 @@ class Server():
                     message = "gameroom.reject"+DELIM+room_name
                 self.notify_exchange('',returnaddr,message)
 
+    """
+    A wrapper with a log function stuck to it.
+    """
     def notify_exchange(self,ex,key,message,props=None):
         if props:
             Log.info("Sending exchange %r message %r with key %r with some extra properties." % (ex,message,key))
@@ -147,16 +180,26 @@ class Server():
             Log.info("Sending exchange %r message %r with key %r." % (ex,message,key))
             self.channel.basic_publish(exchange=ex,routing_key=key,body=message)
 
+    """
+    The server callback function, where nothing much really happens.
+    """
     def lobby_queue_callback(self, ch, method, properties, body):
         rk = method.routing_key
         Log.info("Lobby queue received message %r with key %r." % (body,rk))
         if rk == 'ping_open':
             self.publish_status(True)
 
+    """
+    legacy code, which could really be cut down, but it's 11 am..
+    """
     def publish_status(self,running):
         tag = 'open' if running else 'closed'
         self.notify_exchange(SERV_EXCHANGE,tag,self.servname,self.lobby_reply_prop)
 
+    """
+    A function which destroys a game room once everyone has left it.
+    @param roomname - the room to be destroyed
+    """
     def destroy_room(self,roomname):
         try:
             self.gamerooms[roomname].disconnect()
@@ -166,22 +209,41 @@ class Server():
         except:
             return
 
+    """
+    The main loop of the server
+    """
     def run(self):
         self.channel.start_consuming()
 
+    """
+    And of course disconnecting/clearing stuff
+    """
     def disconnect(self):
         self.channel.exchange_delete(self.servname)
         self.publish_status(False)
         self.channel.close()
 
+"""
+A thread which handles all the pyro4 daemon registering
+"""
 class ObjectHandler(Thread):
+    """
+    @param servhost - the IP that the server is bound to
+    @param nathost - the external IP of the server
+    """
     def __init__(self,servhost,external_host):
         Thread.__init__(self)
         self.pyro_daemon = Pyro4.Daemon(host=servhost,port=7777,nathost=external_host,natport=7777)
 
+    """
+    The main loop - just a request loop
+    """
     def run(self):
         self.pyro_daemon.requestLoop()
 
+    """
+    All other functions are just wrappers really.
+    """
     def register(self,inc):
         return self.pyro_daemon.register(inc)
 

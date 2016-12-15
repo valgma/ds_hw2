@@ -15,7 +15,15 @@ GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.uri",
 "game.ready","game.configure","game.disconnected","game.skip","game.rejoined"]
 #TODO: Field for ":" and other magic strings
 
+"""
+The class which handles all the connections for a single client
+"""
 class ClientConnector(Thread):
+    """
+    The constructor
+    @param pikahost - the rabbitmq server
+    @param client - the client application frame
+    """
     def __init__(self,pikahost,client):
         Thread.__init__(self)
         self.app = client
@@ -25,6 +33,11 @@ class ClientConnector(Thread):
         self.room_name = ""
         self.kas = None
 
+    """
+    Connecting the client to the rabbitmq server, declaring the exchanges,
+    setting up callbacks
+    @param pikahost the IP of the server
+    """
     def connect(self,pikahost):
         #connect to broker
         credentials = pika.PlainCredentials('DSHW2', 'DSHW2')
@@ -41,6 +54,13 @@ class ClientConnector(Thread):
                               no_ack=True)
         #self.channel.basic_qos(prefetch_count=1)
 
+
+    """
+    Just sets up all the sorts of queues we use
+    server_queue -> information about joining/leaving servers
+    lobby_queue -> information about people in servers, games popping up etc
+    game_queue -> all game-related info
+    """
     def make_queues(self):
         #create own message queues
         self.dec_result = self.channel.queue_declare(exclusive=True)
@@ -57,12 +77,22 @@ class ClientConnector(Thread):
                                 queue=self.lobby_queue)
         self.channel.basic_consume(self.game_callback,queue=self.game_queue)
 
+    """
+    just a convenience function which sends a message to an exchange
+    """
     def ping_servers(self):
         self.notify_exchange(SERV_EXCHANGE,'ping_open','',self.lobby_reply_prop)
 
+    """
+    the run method of the thread. all it does is consume
+    """
     def run(self):
         self.channel.start_consuming()
 
+    """
+    the callback method which handles server join/leave events and when
+    the player can join a specific server
+    """
     def server_callback(self, ch, method, properties, body):
         rk = method.routing_key
         Log.debug("Server queue received message %r with key %r." % (body,rk))
@@ -85,11 +115,25 @@ class ClientConnector(Thread):
             self.app.hide_server_selection()
             self.app.show_lobby()
 
+    """
+    A function which creates the spammer that notifies the server that the
+    player has not disconnected.
+    @param server - the server to be notified of our existence
+    @param username - our username to be sent as the message
+    """
     def create_keepalive(self,server,username):
         self.kas = KeepAliveSpammer(self.channel,server,username)
         self.kas.setDaemon(True)
         self.kas.start()
 
+    """
+    A function which (dis)connects certain keys in an exchange to a queue. The
+    wildcards of pika did not work for me, so I had to resort to this.
+    @param server_name the exchange to bind from
+    @keys the routing keys that we are interested in
+    @q the queue to bind to
+    @connect a flag whether to connect or disconnect
+    """
     def connect_exchange(self,server_name,keys,q,connect):
         for key in keys:
             if connect:
@@ -101,6 +145,9 @@ class ClientConnector(Thread):
                                         queue=q,
                                         routing_key=key)
 
+    """
+    The game callback, which handles all the game logic messages.
+    """
     def game_callback(self, ch, method, properties, body):
         rk = method.routing_key
         Log.debug("Game queue received message %r with key %r." % (body,rk))
@@ -138,6 +185,10 @@ class ClientConnector(Thread):
         elif rk == "game.rejoined" and body == self.app.username:
             self.game_ui.rejoin()
 
+    """
+    The lobby callback which handles messages about players/rooms leaving or
+    being busy/available
+    """
     def lobby_callback(self, ch, method, properties, body):
         rk = method.routing_key
         Log.debug("Lobby queue received message %r with key %r." % (body,rk))
@@ -175,10 +226,15 @@ class ClientConnector(Thread):
             room = msg[1]
             self.app.notify_closed(room)
 
-
+    """
+    A wrapper for a slightly more apt name
+    """
     def join_server(self,serv_name,username):
         self.propose_name(serv_name,username)
 
+    """
+    A function which just wraps the API function in itself, but also always logs
+    """
     def notify_exchange(self,ex,key,message,props=None):
         if props:
             Log.info("Sending exchange %r message %r with key %r with some extra properties." % (ex,message,key))
@@ -187,29 +243,57 @@ class ClientConnector(Thread):
             Log.info("Sending exchange %r message %r with key %r." % (ex,message,key))
             self.channel.basic_publish(exchange=ex,routing_key=key,body=message)
 
+    """
+    just a convenience function so you don't have to specify so many parameters
+    and you have more of an idea what it is doing based on the function name
+    """
     def notify_lobby_server(self,key,message,props=None):
         self.notify_exchange(self.lobby_server,key,message,props)
 
+    """
+    just a convenience function which sends a message to an exchange
+    """
     def propose_name(self,serv_name,username):
         self.notify_exchange(serv_name,'players.req',username,self.lobby_reply_prop)
 
+    """
+    just a convenience function which sends a message to an exchange
+    """
     def request_playerlist(self):
         self.notify_lobby_server('players.ping','')
 
+    """
+    just a convenience function which sends a message to an exchange
+    also sets up some properties
+    """
     def request_room(self, name, size):
         replyprop = pika.BasicProperties(reply_to=self.lobby_queue)
         self.notify_lobby_server('gameroom.request',name + DELIM + str(size),replyprop)
 
+    """
+    just a convenience function which sends a message to an exchange
+    also sets up some properties
+    """
     def join_room(self,name):
         replyprop = pika.BasicProperties(reply_to=self.lobby_queue)
         self.notify_lobby_server('gameroom.join',name+DELIM+self.app.username,replyprop)
 
+    """
+    just a convenience function which sends a message to an exchange
+    """
     def request_roomlist(self):
         self.notify_lobby_server('gameroom.ping','')
 
+    """
+    just a convenience function which sends a message to an exchange
+    """
     def get_game_players(self):
         self.notify_exchange(self.room_name,"game.ping",'')
 
+    """
+    Unsubscribes the server from the proper queue, stops the keep alive spammer,
+    notifies server of leaving
+    """
     def leave_server(self):
         self.notify_lobby_server('players.remove',self.app.username)
         self.connect_exchange(self.lobby_server,LOBBY_KEYS,self.lobby_queue,False)
@@ -217,6 +301,9 @@ class ClientConnector(Thread):
         self.kas.stop()
         self.kas = None
 
+    """
+    Notifies room of leaving and unsubscribes keys from exchange
+    """
     def leave_game(self):
         self.game_ui = None
         self.connect_exchange(self.room_name,GAME_KEYS,self.game_queue,False)
@@ -224,13 +311,22 @@ class ClientConnector(Thread):
         self.notify_exchange(self.lobby_server,"players.available",self.app.username)
         self.room_name = ""
 
+
+    """
+    just a convenience function which sends a message to an exchange
+    """
     def request_uri(self):
         self.notify_exchange(self.room_name,"game.requri",'')
 
+    """
+    Notifies people of us leaving and closes down any connections
+    """
     def disconnect(self):
         if self.app.username and self.lobby_server:
             self.notify_lobby_server('players.remove',self.app.username)
         if self.app.username and self.room_name:
             self.notify_exchange(self.room_name,"game.sayonara",self.app.username)
+        if self.kas:
+            self.kas.stop()
         self.channel.queue_delete(queue=self.server_queue)
         self.connection.close()

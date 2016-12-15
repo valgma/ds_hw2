@@ -1,7 +1,14 @@
 import Pyro4
 
+"""
+The RMI object which handles all game logic in a particular room
+"""
 @Pyro4.expose
 class GameState(object):
+    """
+    The constructor
+    @params board_size the size of the board
+    """
     def __init__(self, board_size):
         self.players = set()
         self.board_size = board_size
@@ -16,9 +23,17 @@ class GameState(object):
         self.ships_confirmed = False
         self.disconnected_players = []
 
+    """
+    Set a player as being disconnected
+    @param player - the player that has disconnected
+    """
     def dc_player(self,player):
         self.disconnected_players.append(player)
 
+    """
+    Set a player to no longer be considered disconnected
+    @param player - the player that has returned
+    """
     def revive_player(self,player):
         self.disconnected_players.remove(player)
 

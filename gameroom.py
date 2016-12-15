@@ -8,7 +8,18 @@ GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara",\
 LOBBY_KEYS = ["players.disconnected"]
 SHUTDOWN = 'gameroom.remove'
 
+"""
+A class which handles the callbacks of a certain game.
+"""
 class Gameroom(Thread):
+    """
+    The constructor
+    @param pikahost - the rabbitmq server
+    @param title - the name of the room
+    @param serv - the host server
+    @gameobject - the gameobject of the game, which handles all game logic
+    @object_uri - the pyro4 uri of the gameobject
+    """
     def __init__(self,pikahost,title,serv,gameobject,object_uri):
         Thread.__init__(self)
         self.open = True
@@ -24,6 +35,10 @@ class Gameroom(Thread):
         Log.debug("Room %r online." % self.exchange)
         self.connect(pikahost)
 
+    """
+    Initializing the connection
+    @param pikahost - the rabbitmq server
+    """
     def connect(self,pikahost):
         credentials = pika.PlainCredentials('DSHW2', 'DSHW2')
         parameters = pika.ConnectionParameters(pikahost,5672,'/',credentials)
@@ -33,14 +48,25 @@ class Gameroom(Thread):
         self.make_queue()
         self.bind_queue()
 
+    """
+    Declaring exchanges that the game needs
+    """
     def declare_exchanges(self):
         self.channel.exchange_declare(exchange=self.servname)
         self.channel.exchange_declare(exchange=self.exchange)
 
+    """
+    Initializing queues
+    """
     def make_queue(self):
         self.dec_result = self.channel.queue_declare(exclusive=True)
         self.game_queue = self.dec_result.method.queue
 
+    """
+    binding the necessary queues from the exchanges
+    The LOBBY_KEYS one is required to detect when a person has disconnected
+    from this game
+    """
     def bind_queue(self):
         for key in GAME_KEYS:
             self.channel.queue_bind(exchange=self.exchange,
@@ -52,6 +78,10 @@ class Gameroom(Thread):
                                     routing_key=key)
         self.channel.basic_consume(self.game_callback,queue=self.game_queue)
 
+
+    """
+    The main callback method of the game. Handles all game logic related stuff
+    """
     def game_callback(self, ch, method, properties, body):
         rk = method.routing_key
         Log.info("Game queue received message %r with key %r" % (body,rk))
@@ -100,6 +130,9 @@ class Gameroom(Thread):
             if body in self.gamestate.disconnected_players:
                 self.notify_players('game.sayonara',body)
 
+    """
+    A convenience method/wrapper for logging all messages.
+    """
     def notify_exchange(self,ex,key,message,props=None):
         if props:
             Log.info("Sending exchange %r message %r with key %r with some extra properties." % (ex,message,key))
@@ -108,12 +141,22 @@ class Gameroom(Thread):
             Log.info("Sending exchange %r message %r with key %r." % (ex,message,key))
             self.channel.basic_publish(exchange=ex,routing_key=key,body=message)
 
+    """
+    A true convenience method since most communication is in this one exchange
+    """
     def notify_players(self,key,message,props=None):
         self.notify_exchange(self.exchange,key,message,props)
 
+    """
+    The main method of the thread - it just consumes
+    """
     def run(self):
         self.channel.start_consuming()
 
+    """
+    A method that notifies the server of its disappearence and shuts down the
+    channel
+    """
     def disconnect(self):
         self.notify_exchange(self.servname,SHUTDOWN,self.roomname)
         self.channel.close()

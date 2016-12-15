@@ -1,21 +1,31 @@
 #!/usr/bin/env python
 import sys
-from random import randint
 from server import Server
 from utils import make_logger
+import uuid
 Log = make_logger()
 
+"""
+Checking if the external IP is set
+"""
 if len(sys.argv) > 2:
     ext_host = sys.argv[2]
 else:
     ext_host = 'localhost'
 
+"""
+And the internal one to which we bind the socket.
+"""
 if len(sys.argv) > 1:
     pikahost = sys.argv[1]
 else:
     pikahost = 'localhost'
 
-name = "server_"+str(randint(0,1000))
+"""
+This is a hacky way of setting up "unique" server names without having to
+manually do it
+"""
+name = "server_"+str(uuid.uuid1())
 s = Server(pikahost,name,ext_host)
 try:
     s.run()
