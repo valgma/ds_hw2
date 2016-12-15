@@ -84,6 +84,9 @@ class GameUI(tk.Frame):
         self.update_playercolour(self.leader)
         if leader == self.root.username:
             self.gamebox.add_leader_button()
+            #if not self.gamebox.gamestate.are_ships_confirmed():
+            #    self.gamebox.add_ship_confirm()
+
         #TODO: if leadership changes, change the button back (self.gamebox.remove_leader_button())
         self.update_playercolour(leader)
 

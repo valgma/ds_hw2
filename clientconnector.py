@@ -12,7 +12,7 @@ SERVER_KEYS = ["open","closed"]
 Log = make_logger()
 GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.uri",\
 "game.ping","game.start","game.fire","game.all_sunk","game.over","game.restart",\
-"game.ready"]
+"game.ready","game.configure"]
 #TODO: Field for ":" and other magic strings
 
 class ClientConnector(Thread):
@@ -127,6 +127,8 @@ class ClientConnector(Thread):
             self.game_ui.gamebox.rcv_restart_game()
         elif rk == "game.leader":
             self.game_ui.promote_to_leader(body)
+        elif rk == "game.configure":
+            self.game_ui.gamebox.rcv_game_configure()
         elif rk == "game.ready":
             self.game_ui.update_playercolour(body,'light sky blue')
             print "%r is ready!!!!!!" % body
