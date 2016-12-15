@@ -5,7 +5,8 @@ from threading import Thread
 import pika
 
 LOBBY_KEYS = ["players.add", "players.remove","gameroom.add","gameroom.remove",\
-    "players.busy","players.available","players.ping"]
+    "players.busy","players.available","players.ping","gameroom.busy",\
+    "gameroom.available"]
 SERVER_KEYS = ["open","closed"]
 Log = make_logger()
 GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.uri",\
@@ -136,6 +137,10 @@ class ClientConnector(Thread):
             self.app.update_listbox(self.app.lobby_roomlist,body,True)
         elif rk == 'gameroom.remove':
             self.app.update_listbox(self.app.lobby_roomlist,body,False)
+        elif rk == 'gameroom.busy':
+            self.app.mark_red(self.app.lobby_roomlist,body,True)
+        elif rk == 'gameroom.available':
+            self.app.mark_red(self.app.lobby_roomlist,body,False)
         elif rk == 'players.ping':
             self.notify_lobby_server('players.add',self.app.username)
             if self.game_ui:
