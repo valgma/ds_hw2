@@ -310,6 +310,8 @@ class Gamebox(tk.Frame):
         #    canv.clear()
         # reinitializing the fields in Gamestate
         self.gamestate.restart()
+        # require confirming ships again
+        self.add_ship_confirm()
         # sending a message to all players that the game has restarted
         self.master.notify_players("game.restart", "")
 
@@ -325,6 +327,9 @@ class Gamebox(tk.Frame):
         # reenabling the "Ready"/"Start game" button
         self.startbutton.config(state="normal")
         self.message_label.config(text="Position your ships!")
+        # set ship conf state to False
+        self.gamestate.set_ships_confirmed(False)
+        self.update_ship_label()
         # reinitialixing the set containing shipcells
         self.clear_clicks()
 

@@ -174,6 +174,10 @@ class GameState(object):
     def are_ships_confirmed(self):
         return self.ships_confirmed
 
+    # for changing confirm state when game is reset
+    def set_ships_confirmed(self, cond):
+        self.ships_confirmed = cond
+
     # adding the numbers for ships per length
     def add_req_ships(self, ship2, ship3, ship4, ship5):
         self.req_ships = {2:ship2, 3:ship3, 4:ship4, 5:ship5}
