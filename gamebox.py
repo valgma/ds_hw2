@@ -25,7 +25,7 @@ class Gamebox(tk.Frame):
         tk.Frame.__init__(self, master)
         self.my_name = my_name
         self.gamestate = master.gamestate
-        board_size = self.gamestate.get_board_size()
+        board_size = self.gamestate.get_board_size()  # square
         self.rows = board_size
         self.cols = board_size
         self.last_click_loc = (None, None, None)  # name, row, col
@@ -37,9 +37,11 @@ class Gamebox(tk.Frame):
         if not tmp_field:
             tmp_field = [[0] * self.cols] * self.rows
 
+        # create own field, place it in the center
         self.my_canvas = GameCanvas(self, self.box_edge, self.rows, self.cols, tmp_field, my_name)
         self.my_canvas.grid(row=0, columnspan=2)
 
+        # create and draw other player fields, in the bottom
         self.other_canvases = {}
         for name, field in other_fields.iteritems():
             self.other_canvases[name] = GameCanvas(self, self.box_edge, self.rows, self.cols, field, name)
@@ -49,8 +51,6 @@ class Gamebox(tk.Frame):
         # buttons in a separate frame
         self.button_frame = tk.Frame(self)
         self.button_frame.grid(row=0, column=2)
-        #self.entry_input = tk.Entry(self.button_frame)
-        #self.entry_input.grid(row=0, column=0)
         self.startbutton = tk.Button(self.button_frame, text='Ready', command=self.ready)
         self.startbutton.grid(row=1, column=0)
         self.resetbutton = tk.Button(self.button_frame, text='Restart game', command=self.restart_game)
@@ -63,7 +63,6 @@ class Gamebox(tk.Frame):
         self.update_ship_label()
 
         # separate frame for the leader for providing the number of ships per length
-
         self.ship_frame = tk.Frame(self)
         self.ship2_input = tk.Entry(self.ship_frame)
         self.ship3_input = tk.Entry(self.ship_frame)
@@ -82,6 +81,10 @@ class Gamebox(tk.Frame):
         self.ship3_label.grid(row=1, column=1)
         self.ship4_label.grid(row=2, column=1)
         self.ship5_label.grid(row=3, column=1)
+        self.ship2_input.insert(0, '4')
+        self.ship3_input.insert(0, '3')
+        self.ship4_input.insert(0, '2')
+        self.ship5_input.insert(0, '1')
         self.ship_button.grid(row=4, column=0)
         self.ship_frame.grid_forget()
 
@@ -418,7 +421,7 @@ class Gamebox(tk.Frame):
             s = ""
         else:
             s = self.message_label.cget("text") + "\n"
-        print "Here, I am", self.my_name, "it's ", turn, "'s turn."
+        # print "Here, I am", self.my_name, "it's ", turn, "'s turn."
         # if it's our turn to fire, we display such message and enable all other players' fields for us to fire
         if turn == self.my_name:
             self.message_label.config(text=(s + "Your turn!"))
@@ -508,7 +511,7 @@ class Gamebox(tk.Frame):
 
     # drawing a sunk ship cell in our window on a given person's board
     def draw_crash(self, name, row, col):
-        print "CRASH"
+        # print "CRASH"
         if name == self.my_name:
             self.my_canvas.draw_crash(row, col)
         elif name in self.other_canvases:
@@ -567,6 +570,7 @@ class Gamebox(tk.Frame):
     def clear_clicks(self):
         self.clicks_set.clear()
 
+    # collects uncleared clicks from specified field
     def get_clicks(self, field_name):
         field = []
         for name, row, col in self.clicks_set:
@@ -577,10 +581,13 @@ class Gamebox(tk.Frame):
     def print_ships(self):
         print self.get_clicks(self.my_name)
 
+    # if placement of ships is as required
     def validate_ships(self):
         ships = self.get_clicks(self.my_name)
         return validate_ships(ships, self.rows, self.cols, self.gamestate.get_req_ships())
 
+
+# class for drawing the player field
 class GameCanvas(tk.Canvas):
     def __init__(self, master, box_edge, rows, cols, field, name):
         self.root = master
@@ -589,11 +596,11 @@ class GameCanvas(tk.Canvas):
         self.cols = cols
         self.field = field
         self.name = name
-        self.w, self.h = self.box_edge * (self.cols+1), self.box_edge * (self.rows+1) + 30
+        self.w, self.h = self.box_edge * (self.cols+1), self.box_edge * (self.rows+1) + 30 # extra allows to put name there
 
         tk.Canvas.__init__(self, master, width=self.w, height=self.h)
 
-        self.create_text((int(cols*box_edge/2), self.box_edge * (self.rows+1)+15), text=self.name)
+        self.create_text((int(cols*box_edge/2), self.box_edge * (self.rows+1)+15), text=self.name) # nimi
 
         # draw grid
         for row in range(self.rows + 2):
@@ -651,16 +658,18 @@ class GameCanvas(tk.Canvas):
         self.create_line(x0, y0, x0+self.box_edge, y0+self.box_edge)
         self.create_line(x0, y0+self.box_edge, x0+self.box_edge, y0)
 
+    # starts listening left mouseclicks, colors top-left green
     def enable_input(self):
         # bind mouseclick
         self.bind("<Button-1>", self.canvas_mouseclick)
         self.draw_rec(-1, -1, 'green')
 
+    # stops listening, top-left red
     def disable_input(self):
         self.unbind("<Button-1>")
         self.draw_rec(-1, -1, 'red')
 
-    # function for handling a mousclick on the canvas
+    # function for handling a mouseclick on the canvas
     def canvas_mouseclick(self, event):
         x, y = event.x, event.y
         # getting the location of the click
@@ -668,7 +677,7 @@ class GameCanvas(tk.Canvas):
         col = int(x / self.box_edge - 1)
         if row < self.rows and row >= 0 and col < self.cols and col >= 0:               # creating ships only within bounds
             self.root.set_last_click(self.name, row, col)
-        print str(self.name) + ": " + '%d %d' % (row, col)
+        # print str(self.name) + ": " + '%d %d' % (row, col)
         # if we clicked on somebody else's board, we check if we can fire there
         if self.master.my_name != self.name and row < self.rows and col < self.cols:    # firing only within the bounds of other players' boards
             tgt_board = self.root.gamestate.get_other_players_boards()[self.master.my_name][self.name]
@@ -677,19 +686,8 @@ class GameCanvas(tk.Canvas):
             if cell_value < 2:      # if it's 2 (hit by us), 3 (missed by us) or 4 (crashed by anyone), we can't fire there any more
                 self.master.fire(self.master.my_name, self.name, row, col)
 
+    # for reseting the field
     def clear(self):
         for row in range(self.rows):
             for col in range(self.cols):
                 self.draw_rec(row, col, SEA_COL)
-
-
-if __name__ == '__main__':
-    my_game = [[0 for _ in range(10)] for _ in range(10)]
-    other_games = {str(i):[[randint(0, 5) for _ in range(10)] for _ in range(10)] for i in range(2)}
-
-    root = tk.Tk()
-    root.title("Blah blah")
-    mainframe = Gamebox(root, 'myself', my_game, other_games)
-    mainframe.grid(sticky=(tk.N, tk.W, tk.E, tk.S))
-
-    root.mainloop()
