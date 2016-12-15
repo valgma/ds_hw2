@@ -82,6 +82,10 @@ class Gamebox(tk.Frame):
         self.ship3_label.grid(row=1, column=1)
         self.ship4_label.grid(row=2, column=1)
         self.ship5_label.grid(row=3, column=1)
+        self.ship2_input.insert(0, '4')
+        self.ship3_input.insert(0, '3')
+        self.ship4_input.insert(0, '2')
+        self.ship5_input.insert(0, '1')
         self.ship_button.grid(row=4, column=0)
         self.ship_frame.grid_forget()
 
