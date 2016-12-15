@@ -230,6 +230,7 @@ class Gamebox(tk.Frame):
 
     def switch_turn(self):
         turn = self.gamestate.get_turn()    # actually already switched in the method fire, here just handling the labels
+        self.master.colour_turn(turn)
         if "Waiting" in self.message_label.cget("text"):
             s = ""
         else:
