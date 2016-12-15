@@ -66,8 +66,10 @@ class Gameroom(Thread):
             self.notify_players("game.uri",str(self.uri))
         elif rk == "game.start":
             self.open = False
+            self.notify_exchange(self.servname,'gameroom.busy',self.roomname)
         elif rk == "game.restart":
             self.open = True
+            self.notify_exchange(self.servname,'gameroom.available',self.roomname)
 
     def notify_exchange(self,ex,key,message,props=None):
         if props:

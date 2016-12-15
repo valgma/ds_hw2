@@ -64,7 +64,8 @@ class GameUI(tk.Frame):
         #self.gamebox.switch_turn()
 
     def start_game(self):
-        self.clear_ready()
+        self.clear_colours()
+        self.colour_turn(self.leader)
         self.gamebox.rcv_start()
 
 
@@ -94,11 +95,18 @@ class GameUI(tk.Frame):
             Log.debug("Couldn't change colour of %r.", player)
             return
 
-    def clear_ready(self):
+    def clear_colours(self):
         playerlist = self.players.get(0,tk.END)
         for ind, player_name in enumerate(playerlist):
             if player_name != self.leader:
                 self.players.itemconfig(ind,bg='white')
+            else:
+                self.players.itemconfig(ind,bg='pale green')
+
+    def colour_turn(self,name):
+        self.clear_colours()
+        colour = 'red' if self.leader == name else 'orange'
+        self.update_playercolour(name,colour)
 
     def rem_player(self,name):
         try:

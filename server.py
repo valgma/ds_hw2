@@ -111,6 +111,8 @@ class Server():
         elif rk == 'gameroom.ping':
             for rm in self.gamerooms.keys():
                 self.notify_exchange(self.servname,'gameroom.add',rm)
+                if not self.gamerooms[rm].open:
+                    self.notify_exchange(self.servname,'gameroom.busy',rm)
         elif rk == 'gameroom.join':
             m = body.split(DELIM)
             room_name = m[0]
