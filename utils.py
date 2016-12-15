@@ -1,7 +1,7 @@
 import logging
 SERV_EXCHANGE = 'servers'
 DELIM = "/"
-KEEPALIVE = 10
+KEEPALIVE = 5
 TIMEOUT = KEEPALIVE*3
 
 def make_logger():

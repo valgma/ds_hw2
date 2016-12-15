@@ -295,6 +295,15 @@ class Gamebox(tk.Frame):
         self.startbutton.config(text='Start game', command=self.start_game)
         if not self.gamestate.get_game_on():
             self.startbutton.config(state="normal")
+        self.kick_entry = tk.Entry(self.button_frame)
+        self.kick_entry.grid(row=5,column=0)
+        self.kick_button = tk.Button(self.button_frame, text='Kick disconnected player', command=self.kick)
+        self.kick_button.grid(row=6, column=0)
+
+
+    def kick(self):
+        player_name = self.kick_entry.get()
+        self.master.notify_players('game.kick',player_name)
 
     # draws other players fields, 3 fields in a row
     def draw_fields(self):

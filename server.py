@@ -82,7 +82,7 @@ class Server():
 
     def game_queue_callback(self, ch, method, properties, body):
         rk = method.routing_key
-        Log.debug("Game queue received message %r with key %r" % (body,rk))
+        Log.info("Lobby queue received message %r with key %r" % (body,rk))
 
         if rk == 'players.req':
             target = properties.reply_to
@@ -141,15 +141,15 @@ class Server():
 
     def notify_exchange(self,ex,key,message,props=None):
         if props:
-            Log.debug("Sending exchange %r message %r with key %r with some extra properties." % (ex,message,key))
+            Log.info("Sending exchange %r message %r with key %r with some extra properties." % (ex,message,key))
             self.channel.basic_publish(exchange=ex,routing_key=key,body=message,properties=props)
         else:
-            Log.debug("Sending exchange %r message %r with key %r." % (ex,message,key))
+            Log.info("Sending exchange %r message %r with key %r." % (ex,message,key))
             self.channel.basic_publish(exchange=ex,routing_key=key,body=message)
 
     def lobby_queue_callback(self, ch, method, properties, body):
         rk = method.routing_key
-        Log.debug("Lobby queue received message %r with key %r." % (body,rk))
+        Log.info("Lobby queue received message %r with key %r." % (body,rk))
         if rk == 'ping_open':
             self.publish_status(True)
 

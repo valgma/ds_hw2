@@ -43,7 +43,8 @@ class GameUI(tk.Frame):
         self.gamebox.gamestate.remove_player(self.gamebox.my_name)
 
     def add_player(self,name):
-        if name not in self.players.get(0,tk.END):
+        pl = self.players.get(0,tk.END)
+        if name not in pl:
             self.players.insert(tk.END,name)
             if self.gamebox:
                 self.gamebox.add_empty_field(name)
@@ -52,6 +53,10 @@ class GameUI(tk.Frame):
                 else:
                     self.gamebox.disable_field(name)
                 self.gamebox.gamestate.add_player(name)
+        else:
+            ind = pl.index(name)
+            self.players.itemconfig(ind,fg='black')
+
 
     #def switch_turn(self, msg):
     def fire(self, msg):
@@ -105,6 +110,14 @@ class GameUI(tk.Frame):
                 self.players.itemconfig(ind,bg='white')
             else:
                 self.players.itemconfig(ind,bg='pale green')
+
+    def colour_name_red(self,name):
+        try:
+            ind = self.players.get(0,tk.END).index(name)
+            self.players.itemconfig(ind,fg='red')
+        except Exception as e:
+            Log.debug("Couldn't change colour of %r.", name)
+            return
 
     def colour_turn(self,name):
         self.clear_colours()

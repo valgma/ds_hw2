@@ -15,17 +15,14 @@ class KeepAliveListener(Thread):
         while 1:
             sleep(TIMEOUT)
             alive = {}
-            print "<<<<< WIPE >>>>>"
             for client in self.clients.keys():
                 client_event = self.clients[client]
                 if not client_event.is_set():
                     Log.info("%r has disconnected from exchange" % client)
                     self.notify_exchange(self.to_exchange,"players.disconnected",client)
                 else:
-                    print "%r is alive" % client
                     alive[client] = client_event
                     alive[client].clear()
-            print "<<<<< WIPE >>>>>"
             self.clients = alive
 
     def add_client(self,client):
