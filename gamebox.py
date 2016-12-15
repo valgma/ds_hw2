@@ -160,6 +160,9 @@ class Gamebox(tk.Frame):
         self.gamestate.switch_turn()
         self.master.notify_players('game.fire',src_name + "/" + tgt_name + "/" + str(row) + "/" + str(col))
 
+    def skip(self):
+        self.switch_turn()
+
     def rcv_fire(self, src_name, tgt_name, row, col):
         board = self.gamestate.get_board(tgt_name)
         value = board[row][col]

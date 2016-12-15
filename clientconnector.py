@@ -133,6 +133,8 @@ class ClientConnector(Thread):
             self.game_ui.update_playercolour(body,'light sky blue')
         elif rk == "game.disconnected":
             self.game_ui.colour_name_red(body)
+        elif rk == "game.skip":
+            self.game_ui.skip()
 
     def lobby_callback(self, ch, method, properties, body):
         rk = method.routing_key

@@ -83,8 +83,9 @@ class Gameroom(Thread):
                 Log.debug("Room %r had player %r disconnect." % (self.roomname,body))
                 if self.gamestate.get_turn() == body:
                     Log.debug("It was that player's turn. Skipping..")
+                    self.gamestate.switch_turn()
                     self.notify_players('game.skip','')
-                self.disconnected_players.append(body)
+                self.gamestate.dc_player(body)
                 self.notify_players('game.disconnected',body)
                 if body == self.owner:
                     if len(self.players) == 1:
@@ -93,9 +94,7 @@ class Gameroom(Thread):
                         self.owner = self.players[1]
                         self.notify_players("game.leader",self.owner)
         elif rk == 'game.kick':
-            if body in self.disconnected_players:
-                self.disconnected_players.remove(body)
-                self.players.remove(body)
+            if body in self.gamestate.disconnected_players:
                 self.notify_players('game.sayonara',body)
 
     def notify_exchange(self,ex,key,message,props=None):

@@ -68,6 +68,9 @@ class GameUI(tk.Frame):
         self.gamebox.rcv_fire(src_name, tgt_name, row, col)
         #self.gamebox.switch_turn()
 
+    def skip(self):
+        self.gamebox.skip()
+
     def start_game(self):
         self.clear_colours()
         self.colour_turn(self.leader)
