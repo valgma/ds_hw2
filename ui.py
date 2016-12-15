@@ -194,6 +194,9 @@ class ClientApplication(tk.Frame):
     def notify_rejection(self,servername,username):
         tkMessageBox.showerror("Invalid name!","Server "+servername+" has rejected the name "+username+".")
 
+    def notify_closed(self,room):
+        tkMessageBox.showerror("Can't join game!","Room "+room+" is currently in a running game which does not contain you.")
+
 
 app = ClientApplication()
 app.master.title("Battleship 2016")

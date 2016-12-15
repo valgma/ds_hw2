@@ -3,7 +3,7 @@ from utils import make_logger, DELIM
 from threading import Thread, Timer
 
 Log = make_logger()
-GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.requri"]
+GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.requri","game.start","game.restart"]
 SHUTDOWN = 'gameroom.remove'
 
 class Gameroom(Thread):
@@ -64,6 +64,10 @@ class Gameroom(Thread):
                 self.notify_players("game.leader",self.owner)
         elif rk == "game.requri":
             self.notify_players("game.uri",str(self.uri))
+        elif rk == "game.start":
+            self.open = False
+        elif rk == "game.restart":
+            self.open = True
 
     def notify_exchange(self,ex,key,message,props=None):
         if props:

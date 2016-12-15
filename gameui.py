@@ -2,6 +2,7 @@ from utils import make_logger
 from gamebox import Gamebox
 import mtTkinter.mtTkinter as tk
 import Pyro4
+import tkFont
 
 Log = make_logger()
 
@@ -91,6 +92,7 @@ class GameUI(tk.Frame):
             self.players.itemconfig(ind,bg=colour)
             self.leader = leader
         except Exception as e:
+            print e
             Log.debug("Couldn't mark/unmark %r as leader.", leader)
             return
 

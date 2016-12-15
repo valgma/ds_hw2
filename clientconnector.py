@@ -144,6 +144,11 @@ class ClientConnector(Thread):
             self.app.draw_game()
             self.game_ui = self.app.game_frame
             self.notify_lobby_server('players.busy',self.app.username)
+        elif body.startswith("gameroom.reject"):
+            msg = body.split(DELIM)
+            room = msg[1]
+            self.app.notify_closed(room)
+
 
     def join_server(self,serv_name,username):
         self.propose_name(serv_name,username)
@@ -171,7 +176,7 @@ class ClientConnector(Thread):
 
     def join_room(self,name):
         replyprop = pika.BasicProperties(reply_to=self.lobby_queue)
-        self.notify_lobby_server('gameroom.join',name,replyprop)
+        self.notify_lobby_server('gameroom.join',name+DELIM+self.app.username,replyprop)
 
     def request_roomlist(self):
         self.notify_lobby_server('gameroom.ping','')
