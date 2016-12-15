@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from utils import make_logger, SERV_EXCHANGE, DELIM
 from threading import Thread
+from keepalive import KeepAliveSpammer
 
 import pika
 
@@ -22,11 +23,13 @@ class ClientConnector(Thread):
         self.connect(pikahost)
         self.game_ui = None
         self.room_name = ""
+        self.kas = None
 
     def connect(self,pikahost):
         #connect to broker
-        self.connection = pika.BlockingConnection(pika.ConnectionParameters(
-                host=pikahost))
+        credentials = pika.PlainCredentials('DSHW2', 'DSHW2')
+        parameters = pika.ConnectionParameters(pikahost,5672,'/',credentials)
+        self.connection = pika.BlockingConnection(parameters)
         self.channel = self.connection.channel()
         #connect to server declaration exchange
         self.make_queues()
@@ -78,8 +81,14 @@ class ClientConnector(Thread):
             self.lobby_server = server_name
             self.connect_exchange(server_name,LOBBY_KEYS,self.lobby_queue,True)
             self.app.username = msg[2]
+            self.create_keepalive(server_name,self.app.username)
             self.app.hide_server_selection()
             self.app.show_lobby()
+
+    def create_keepalive(self,server,username):
+        self.kas = KeepAliveSpammer(self.channel,server,username)
+        self.kas.setDaemon(True)
+        self.kas.start()
 
     def connect_exchange(self,server_name,keys,q,connect):
         for key in keys:
@@ -167,10 +176,10 @@ class ClientConnector(Thread):
 
     def notify_exchange(self,ex,key,message,props=None):
         if props:
-            Log.debug("Sending exchange %r message %r with key %r with some extra properties." % (ex,message,key))
+            Log.info("Sending exchange %r message %r with key %r with some extra properties." % (ex,message,key))
             self.channel.basic_publish(exchange=ex,routing_key=key,body=message,properties=props)
         else:
-            Log.debug("Sending exchange %r message %r with key %r." % (ex,message,key))
+            Log.info("Sending exchange %r message %r with key %r." % (ex,message,key))
             self.channel.basic_publish(exchange=ex,routing_key=key,body=message)
 
     def notify_lobby_server(self,key,message,props=None):
@@ -200,6 +209,8 @@ class ClientConnector(Thread):
         self.notify_lobby_server('players.remove',self.app.username)
         self.connect_exchange(self.lobby_server,LOBBY_KEYS,self.lobby_queue,False)
         self.lobby_server = None
+        self.kas.stop()
+        self.kas = None
 
     def leave_game(self):
         self.game_ui = None

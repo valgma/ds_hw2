@@ -73,10 +73,10 @@ class Gameroom(Thread):
 
     def notify_exchange(self,ex,key,message,props=None):
         if props:
-            Log.debug("Sending exchange %r message %r with key %r with some extra properties." % (ex,message,key))
+            Log.info("Sending exchange %r message %r with key %r with some extra properties." % (ex,message,key))
             self.channel.basic_publish(exchange=ex,routing_key=key,body=message,properties=props)
         else:
-            Log.debug("Sending exchange %r message %r with key %r." % (ex,message,key))
+            Log.info("Sending exchange %r message %r with key %r." % (ex,message,key))
             self.channel.basic_publish(exchange=ex,routing_key=key,body=message)
 
     def notify_players(self,key,message,props=None):
