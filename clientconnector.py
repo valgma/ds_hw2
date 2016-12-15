@@ -8,7 +8,9 @@ LOBBY_KEYS = ["players.add", "players.remove","gameroom.add","gameroom.remove",\
     "players.busy","players.available","players.ping"]
 SERVER_KEYS = ["open","closed"]
 Log = make_logger()
-GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.uri","game.ping","game.start","game.fire","game.all_sunk","game.over","game.restart"]
+GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.uri",\
+"game.ping","game.start","game.fire","game.all_sunk","game.over","game.restart",\
+"game.ready"]
 #TODO: Field for ":" and other magic strings
 
 class ClientConnector(Thread):
@@ -115,6 +117,9 @@ class ClientConnector(Thread):
             self.game_ui.gamebox.rcv_restart_game()
         elif rk == "game.leader":
             self.game_ui.promote_to_leader(body)
+        elif rk == "game.ready":
+            self.game_ui.update_playercolour(body,'light sky blue')
+            print "%r is ready!!!!!!" % body
 
     def lobby_callback(self, ch, method, properties, body):
         rk = method.routing_key

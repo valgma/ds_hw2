@@ -64,6 +64,7 @@ class GameUI(tk.Frame):
         #self.gamebox.switch_turn()
 
     def start_game(self):
+        self.clear_ready()
         self.gamebox.rcv_start()
 
 
@@ -76,25 +77,28 @@ class GameUI(tk.Frame):
                 print i
 
     def promote_to_leader(self,leader):
+        if self.leader:
+            self.update_playercolour(self.leader,'white')
+        self.leader = leader
+        self.update_playercolour(self.leader)
         if leader == self.root.username:
             self.gamebox.add_leader_button()
         #TODO: if leadership changes, change the button back (self.gamebox.remove_leader_button())
-        self.update_leadercolour(leader)
+        self.update_playercolour(leader)
 
-    def update_leadercolour(self,leader,colour='pale green'):
-        if self.leader:
-            old_leader = self.leader
-            self.leader = ""
-            self.update_leadercolour(old_leader,'white')
+    def update_playercolour(self,player,colour='pale green'):
         try:
-            sisu = self.players.get(0,tk.END)
-            ind = self.players.get(0,tk.END).index(leader)
+            ind = self.players.get(0,tk.END).index(player)
             self.players.itemconfig(ind,bg=colour)
-            self.leader = leader
         except Exception as e:
-            print e
-            Log.debug("Couldn't mark/unmark %r as leader.", leader)
+            Log.debug("Couldn't change colour of %r.", player)
             return
+
+    def clear_ready(self):
+        playerlist = self.players.get(0,tk.END)
+        for ind, player_name in enumerate(playerlist):
+            if player_name != self.leader:
+                self.players.itemconfig(ind,bg='white')
 
     def rem_player(self,name):
         try:
