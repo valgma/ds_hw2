@@ -35,7 +35,7 @@ class GameUI(tk.Frame):
         self.players.pack(fill=tk.Y,expand=1)
 
     def leave_game(self):
-        if self.leader == self.gamebox.my_name:
+        if self.leader == self.gamebox.my_name and self.gamebox.gamestate.get_game_on():
             self.gamebox.gamestate.switch_turn()
         self.root.abandon_game()
         self.connector.leave_game()
@@ -101,8 +101,9 @@ class GameUI(tk.Frame):
             self.gamebox.remove_field(name)
             self.gamebox.gamestate.remove_player(name)
             players = self.gamebox.gamestate.list_players()
-            self.gamebox.switch_turn()
-            if len(players) < 2:
+            if self.gamebox.gamestate.get_game_on():
+                self.gamebox.switch_turn()
+            if len(players) < 2 and self.gamebox.gamestate.get_game_on():
                 print "GAME OVER"
                 #TODO: only 1 player - kick everybody out
             else:

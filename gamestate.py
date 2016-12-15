@@ -42,6 +42,7 @@ class GameState(object):
     def restart(self):
         self.players = self.players.union(self.spectators)
         self.spectators = set()
+        self.ready_players = set()
         self.boards = {}
         self.other_players_boards = {}
 
