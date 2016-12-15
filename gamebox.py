@@ -62,18 +62,20 @@ class Gamebox(tk.Frame):
     def start_game(self):
         ready = self.validate_ships()
         ready_players_count = self.gamestate.get_ready_players_count()
-        if ready and ready_players_count >= 1:
+        print str(ready_players_count)
+        if ready:
             self.gamestate.set_ready(self.my_name)
-            self.gamestate.init_turns(self.my_name)
-            #TODO: start game with only the players who are ready, kick others out - done, but there's some bug
-            ships = self.get_clicks(self.my_name)
-            self.gamestate.add_board(self.my_name, ships)
-            self.gamestate.add_other_players_boards()
-            self.startbutton.config(state="disabled")
-            self.gamestate.set_game_on(True)
-            self.master.notify_players("game.start", "")
-        elif ready:
-            self.message_label.config(text="Not enough players to start.")
+            if ready_players_count >= 2:
+                self.gamestate.init_turns(self.my_name)
+                #TODO: start game with only the players who are ready, kick others out - done, but there's some bug
+                ships = self.get_clicks(self.my_name)
+                self.gamestate.add_board(self.my_name, ships)
+                self.gamestate.add_other_players_boards()
+                self.startbutton.config(state="disabled")
+                self.gamestate.set_game_on(True)
+                self.master.notify_players("game.start", "")
+            else:
+                self.message_label.config(text="Not enough players to start.")
         else:
             self.message_label.config(text="Validation failed.")
         #TODO: lock the game so nobody can join
@@ -165,6 +167,7 @@ class Gamebox(tk.Frame):
         players = self.gamestate.list_players()
         print "LEN OF PLAYERS:", len(players)
         if len(players) == 1 and self.my_name in players:
+            self.gamestate.set_game_on(False)
             self.master.notify_players("game.over", self.my_name)
         else:
             self.switch_turn()
