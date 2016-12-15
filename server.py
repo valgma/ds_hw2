@@ -15,7 +15,7 @@ GAME_KEYS = ["players.req","players.ping","players.remove","gameroom.request","g
 SERVER_KEYS = ["ping_open"]
 
 class Server():
-    def __init__(self,pikahost,title):
+    def __init__(self,pikahost,title,external_host):
         self.servname = title
         self.host = pikahost
         self.connected_clients = []
@@ -27,7 +27,7 @@ class Server():
 
         self.gamerooms = {}
         self.objects = {}
-        self.object_handler = ObjectHandler(pikahost)
+        self.object_handler = ObjectHandler(pikahost,external_host)
         self.object_handler.setDaemon(True)
         self.object_handler.start()
 
@@ -175,9 +175,9 @@ class Server():
         self.channel.close()
 
 class ObjectHandler(Thread):
-    def __init__(self,servhost):
+    def __init__(self,servhost,external_host):
         Thread.__init__(self)
-        self.pyro_daemon = Pyro4.Daemon(host=servhost,port=7777)
+        self.pyro_daemon = Pyro4.Daemon(host=servhost,port=7777,nathost=external_host,natport=7777)
 
     def run(self):
         self.pyro_daemon.requestLoop()
