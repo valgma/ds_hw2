@@ -359,7 +359,7 @@ class Gamebox(tk.Frame):
                 return
 
     def draw_resume_boards(self):
-        opb = self.gamestate.other_players_boards()
+        opb = self.gamestate.get_other_players_boards()
         my_vision = opb[self.my_name]
         for p in my_vision.keys():
             board = my_vision[p]
