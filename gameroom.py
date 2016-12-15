@@ -3,7 +3,9 @@ from utils import make_logger, DELIM
 from threading import Thread, Timer
 
 Log = make_logger()
-GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.requri","game.start","game.restart"]
+GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara",\
+"game.requri","game.start","game.restart","game.kick"]
+LOBBY_KEYS = ["players.disconnected"]
 SHUTDOWN = 'gameroom.remove'
 
 class Gameroom(Thread):
@@ -11,6 +13,7 @@ class Gameroom(Thread):
         Thread.__init__(self)
         self.open = True
         self.players = []
+        self.disconnected_players = []
         self.owner = ""
         self.server = serv
         self.servname = self.server.servname
@@ -43,11 +46,15 @@ class Gameroom(Thread):
             self.channel.queue_bind(exchange=self.exchange,
                                     queue=self.game_queue,
                                     routing_key=key)
+        for key in LOBBY_KEYS:
+            self.channel.queue_bind(exchange=self.servname,
+                                    queue=self.game_queue,
+                                    routing_key=key)
         self.channel.basic_consume(self.game_callback,queue=self.game_queue)
 
     def game_callback(self, ch, method, properties, body):
         rk = method.routing_key
-        Log.debug("Game queue received message %r with key %r" % (body,rk))
+        Log.info("Game queue received message %r with key %r" % (body,rk))
         if rk == "game.joined":
             if body not in self.players:
                 self.players.append(body)
@@ -71,6 +78,24 @@ class Gameroom(Thread):
         elif rk == "game.restart":
             self.open = True
             self.notify_exchange(self.servname,'gameroom.available',self.roomname)
+        elif rk == "players.disconnected":
+            if body in self.players:
+                Log.debug("Room %r had player %r disconnect." % (self.roomname,body))
+                if self.gamestate.get_turn() == body:
+                    Log.debug("It was that player's turn. Skipping..")
+                    self.gamestate.switch_turn()
+                    self.notify_players('game.skip','')
+                self.gamestate.dc_player(body)
+                self.notify_players('game.disconnected',body)
+                if body == self.owner:
+                    if len(self.players) == 1:
+                        self.notify_players('game.sayonara',body)
+                    else:
+                        self.owner = self.players[1]
+                        self.notify_players("game.leader",self.owner)
+        elif rk == 'game.kick':
+            if body in self.gamestate.disconnected_players:
+                self.notify_players('game.sayonara',body)
 
     def notify_exchange(self,ex,key,message,props=None):
         if props:

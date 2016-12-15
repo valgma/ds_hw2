@@ -14,6 +14,13 @@ class GameState(object):
         self.spectators = set()
         self.req_ships = {2:None, 3:None, 4:None, 5:None}
         self.ships_confirmed = False
+        self.disconnected_players = []
+
+    def dc_player(self,player):
+        self.disconnected_players.append(player)
+
+    def revive_player(self,player):
+        self.disconnected_players.remove(player)
 
     # function returning the set of all players still in the game
     def list_players(self):
@@ -81,8 +88,11 @@ class GameState(object):
     # switching the turn
     def switch_turn(self):
         self.turns.append(self.turn)
-        self.turn = self.turns[0]
-        self.turns.pop(0)
+        while 1:
+            self.turn = self.turns[0]
+            self.turns.pop(0)
+            if self.turn not in self.disconnected_players:
+                break
 
     # a function returning whether a certain player is ready
     def is_ready(self, name):
