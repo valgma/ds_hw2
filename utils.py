@@ -14,7 +14,7 @@ def make_logger():
 def validate_ships(ships, rows, cols, req_ships):
     #if len(ships) > 0:
     #    return True #TODO: temporary
-    req_ships = {5:1, 4:2, 3:3, 2:4}
+    # req_ships = {5:1, 4:2, 3:3, 2:4}
     found_ships = []
     # check for single ships
     for (row, col) in ships:
@@ -61,7 +61,7 @@ def validate_ships(ships, rows, cols, req_ships):
         print ship
 
     # check number and lengths of ships
-    ship_lens = {}
+    ship_lens = {2:0, 3:0, 4:0, 5:0}
     for ship in found_ships:
         l = len(ship)
         if l in ship_lens:
