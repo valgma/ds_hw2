@@ -58,7 +58,7 @@ class GameUI(tk.Frame):
             self.players.itemconfig(ind,fg='black')
 
     def rejoin(self):
-        self.gamebox.draw_resume_boards()
+        self.gamebox.resume()
 
     #def switch_turn(self, msg):
     def fire(self, msg):
