@@ -12,6 +12,8 @@ class GameState(object):
         self.turns = []
         self.game_on = False
         self.spectators = set()
+        self.req_ships = {2:None, 3:None, 4:None, 5:None}
+        self.ships_confirmed = False
 
     def list_players(self):
         return self.players
@@ -47,6 +49,7 @@ class GameState(object):
         self.ready_players = set()
         self.boards = {}
         self.other_players_boards = {}
+        self.req_ships = {2:None, 3:None, 4:None, 5:None}
 
     def get_other_players_boards(self):
         return self.other_players_boards
@@ -137,3 +140,20 @@ class GameState(object):
 
     def add_spectator(self, name):
         self.spectators.add(name)
+
+    def are_ships_confirmed(self):
+        return self.ships_confirmed
+
+    def add_req_ships(self, ship2, ship3, ship4, ship5):
+        self.req_ships = {2:ship2, 3:ship3, 4:ship4, 5:ship5}
+        self.ships_confirmed = True
+
+    def get_req_ships(self):
+        return self.req_ships
+
+    def get_ship_count(self, nr):
+        try:
+            return self.req_ships[nr]
+        except Exception as e:
+            print "Illegal ship length:", str(nr)
+            return

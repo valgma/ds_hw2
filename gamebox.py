@@ -58,13 +58,56 @@ class Gamebox(tk.Frame):
         self.resetbutton.grid_forget()
         self.message_label = tk.Label(self.button_frame, text="Position your ships!")
         self.message_label.grid(row=2, column=0)
+        self.ships_label = tk.Label(self.button_frame, text="Leader is still confirming ships.")
+        self.ships_label.grid(row=4,column=0)
+
+        self.ship_frame = tk.Frame(self)
+        #self.ship_frame.grid(row=0, column=3)
+        self.ship2_input = tk.Entry(self.ship_frame)
+        self.ship3_input = tk.Entry(self.ship_frame)
+        self.ship4_input = tk.Entry(self.ship_frame)
+        self.ship5_input = tk.Entry(self.ship_frame)
+        self.ship2_label = tk.Label(self.ship_frame, text="x 2 ships")
+        self.ship3_label = tk.Label(self.ship_frame, text="x 3 ships")
+        self.ship4_label = tk.Label(self.ship_frame, text="x 4 ships")
+        self.ship5_label = tk.Label(self.ship_frame, text="x 5 ships")
+        self.ship_button = tk.Button(self.ship_frame, text="Confirm ships", command=self.confirm_ships)
+        self.ship2_input.grid(row=0, column=0)
+        self.ship3_input.grid(row=1, column=0)
+        self.ship4_input.grid(row=2, column=0)
+        self.ship5_input.grid(row=3, column=0)
+        self.ship2_label.grid(row=0, column=1)
+        self.ship3_label.grid(row=1, column=1)
+        self.ship4_label.grid(row=2, column=1)
+        self.ship5_label.grid(row=3, column=1)
+        self.ship_button.grid(row=4, column=0)
+        self.ship_frame.grid_forget()
+
+    def confirm_ships(self):
+        ship2 = self.ship2_input.get()
+        ship3 = self.ship3_input.get()
+        ship4 = self.ship4_input.get()
+        ship5 = self.ship5_input.get()
+        if ship2.isdigit() and ship2.isdigit() and ship4.isdigit() and ship5.isdigit():
+            self.gamestate.add_req_ships(int(ship2), int(ship3), int(ship4), int(ship5))
+            self.ship_frame.grid_forget()
+            self.master.notify_players("game.configure", "")
+
+    def rcv_game_configure(self):
+        ship2 = self.gamestate.get_ship_count(2)
+        ship3 = self.gamestate.get_ship_count(3)
+        ship4 = self.gamestate.get_ship_count(4)
+        ship5 = self.gamestate.get_ship_count(5)
+        self.ships_label.config(text=str(ship2) + "x2 ships\n" + str(ship3) + "x3 ships\n" +str(ship4) + "x4 ships\n" +str(ship5) + "x5 ships")
+
+    def add_ship_confirm(self):
+        self.ship_frame.grid(row=0, column=3)
 
     def start_game(self):
         ready = self.validate_ships()
-        ready_players_count = self.gamestate.get_ready_players_count()
-        print str(ready_players_count)
         if ready:
             self.gamestate.set_ready(self.my_name)
+            ready_players_count = self.gamestate.get_ready_players_count()
             if ready_players_count >= 2:
                 self.gamestate.init_turns(self.my_name)
                 #TODO: start game with only the players who are ready, kick others out - done, but there's some bug
@@ -77,7 +120,7 @@ class Gamebox(tk.Frame):
             else:
                 self.message_label.config(text="Not enough players to start.")
         else:
-            self.message_label.config(text="Validation failed.")
+            self.message_label.config(text="Ship validation failed.")
         #TODO: lock the game so nobody can join
 
     def rcv_start(self):
@@ -225,7 +268,7 @@ class Gamebox(tk.Frame):
             self.startbutton.config(state="disabled")
             self.master.notify_players('game.ready',self.my_name)
         else:
-            self.message_label.config(text="Validation failed.")
+            self.message_label.config(text="Ship validation failed.")
 
     def ship_shinks(self, tgt_name, ship_cells):
         board = self.gamestate.get_board(tgt_name)
@@ -373,7 +416,7 @@ class Gamebox(tk.Frame):
 
     def validate_ships(self):
         ships = self.get_clicks(self.my_name)
-        return validate_ships(ships, self.rows, self.cols)
+        return validate_ships(ships, self.rows, self.cols, self.gamestate.get_req_ships())
 
 class GameCanvas(tk.Canvas):
     def __init__(self, master, box_edge, rows, cols, field, name):

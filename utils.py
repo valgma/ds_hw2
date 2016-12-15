@@ -9,10 +9,10 @@ def make_logger():
     logging.getLogger("pika").propagate = False
     return LOG
 
-def validate_ships(ships, rows, cols):
-    if len(ships) > 0:
-        return True #TODO: temporary
-    req_ships = {5:1, 4:2, 3:3, 2:4}
+def validate_ships(ships, rows, cols, req_ships):
+    #if len(ships) > 0:
+    #    return True #TODO: temporary
+    #req_ships = {5:1, 4:2, 3:3, 2:4}
     found_ships = []
     # check for single ships
     for (row, col) in ships:
