@@ -23,6 +23,7 @@ class KeepAliveListener(Thread):
                 else:
                     alive[client] = client_event
                     alive[client].clear()
+            Log.info("%d clients still alive" % len(alive.keys()))
             self.clients = alive
 
     def add_client(self,client):
@@ -31,7 +32,10 @@ class KeepAliveListener(Thread):
             self.clients[client].set()
 
     def poke_client(self,client):
-        self.clients[client].set()
+        try:
+            self.clients[client].set()
+        except KeyError as e:
+            return
 
     def notify_exchange(self,ex,key,message,props=None):
         if props:
