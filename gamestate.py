@@ -22,6 +22,8 @@ class GameState(object):
     def remove_player(self, name):
         if name in self.players:
             self.players.remove(name)
+        if name in self.ready_players:
+            self.ready_players.remove(name)
         if self.turn == name:   #TODO: check if it's necessary or already covered
             self.switch_turn()
         if name in self.turns:

@@ -105,14 +105,12 @@ class GameUI(tk.Frame):
             ind = self.players.get(0,tk.END).index(name)
             self.players.delete(ind)
             self.gamebox.remove_field(name)
-            self.gamebox.gamestate.remove_player(name)
+            self.gamebox.gamestate.remove_player(name)  #basically going into spectator mode
             players = self.gamebox.gamestate.list_players()
-            if self.gamebox.gamestate.get_game_on():
-                self.gamebox.switch_turn()
             if len(players) < 2 and self.gamebox.gamestate.get_game_on():
                 print "GAME OVER"
                 #TODO: only 1 player - kick everybody out
-            else:
-                self.notify_players("game.leader", list(players)[0])
+            if self.gamebox.gamestate.get_game_on():
+                self.gamebox.switch_turn()
         except Exception as e:
             return
