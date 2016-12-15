@@ -8,7 +8,9 @@ LOBBY_KEYS = ["players.add", "players.remove","gameroom.add","gameroom.remove",\
     "players.busy","players.available","players.ping"]
 SERVER_KEYS = ["open","closed"]
 Log = make_logger()
-GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.uri","game.ping","game.start","game.fire","game.all_sunk","game.over","game.restart"]
+GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.uri",\
+"game.ping","game.start","game.fire","game.all_sunk","game.over","game.restart",\
+"game.ready"]
 #TODO: Field for ":" and other magic strings
 
 class ClientConnector(Thread):
@@ -115,6 +117,9 @@ class ClientConnector(Thread):
             self.game_ui.gamebox.rcv_restart_game()
         elif rk == "game.leader":
             self.game_ui.promote_to_leader(body)
+        elif rk == "game.ready":
+            self.game_ui.update_playercolour(body,'light sky blue')
+            print "%r is ready!!!!!!" % body
 
     def lobby_callback(self, ch, method, properties, body):
         rk = method.routing_key
@@ -144,6 +149,11 @@ class ClientConnector(Thread):
             self.app.draw_game()
             self.game_ui = self.app.game_frame
             self.notify_lobby_server('players.busy',self.app.username)
+        elif body.startswith("gameroom.reject"):
+            msg = body.split(DELIM)
+            room = msg[1]
+            self.app.notify_closed(room)
+
 
     def join_server(self,serv_name,username):
         self.propose_name(serv_name,username)
@@ -171,7 +181,7 @@ class ClientConnector(Thread):
 
     def join_room(self,name):
         replyprop = pika.BasicProperties(reply_to=self.lobby_queue)
-        self.notify_lobby_server('gameroom.join',name,replyprop)
+        self.notify_lobby_server('gameroom.join',name+DELIM+self.app.username,replyprop)
 
     def request_roomlist(self):
         self.notify_lobby_server('gameroom.ping','')

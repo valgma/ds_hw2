@@ -112,12 +112,19 @@ class Server():
             for rm in self.gamerooms.keys():
                 self.notify_exchange(self.servname,'gameroom.add',rm)
         elif rk == 'gameroom.join':
-            if body in self.gamerooms.keys():
-                room = self.gamerooms[body]
-                if room.open:
-                    returnaddr = properties.reply_to
-                    message = "gameroom.confirm"+DELIM+body
-                    self.notify_exchange('',returnaddr,message)
+            m = body.split(DELIM)
+            room_name = m[0]
+            user_name = m[1]
+            if room_name in self.gamerooms.keys():
+                room = self.gamerooms[room_name]
+                returnaddr = properties.reply_to
+                print room.open
+                print room.players
+                if room.open or user_name in room.players:
+                    message = "gameroom.confirm"+DELIM+room_name
+                else:
+                    message = "gameroom.reject"+DELIM+room_name
+                self.notify_exchange('',returnaddr,message)
 
     def notify_exchange(self,ex,key,message,props=None):
         if props:

@@ -223,6 +223,7 @@ class Gamebox(tk.Frame):
             self.disable_all_fields()
             self.disable_field(self.my_name)
             self.startbutton.config(state="disabled")
+            self.master.notify_players('game.ready',self.my_name)
         else:
             self.message_label.config(text="Validation failed.")
 
