@@ -27,7 +27,7 @@ class Server():
 
         self.gamerooms = {}
         self.objects = {}
-        self.object_handler = ObjectHandler()
+        self.object_handler = ObjectHandler(pikahost)
         self.object_handler.setDaemon(True)
         self.object_handler.start()
 
@@ -110,6 +110,7 @@ class Server():
                 gs = GameState(board_size)
                 self.objects[name] = gs
                 uri = self.object_handler.register(gs)
+                print uri
                 rm = Gameroom(self.host,name,self,gs,uri)
                 rm.setDaemon(True)
                 rm.start()
@@ -174,9 +175,9 @@ class Server():
         self.channel.close()
 
 class ObjectHandler(Thread):
-    def __init__(self):
+    def __init__(self,servhost):
         Thread.__init__(self)
-        self.pyro_daemon = Pyro4.Daemon()
+        self.pyro_daemon = Pyro4.Daemon(host=servhost,port=7777)
 
     def run(self):
         self.pyro_daemon.requestLoop()

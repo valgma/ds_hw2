@@ -22,8 +22,9 @@ class Gameroom(Thread):
         self.connect(pikahost)
 
     def connect(self,pikahost):
-        self.connection = pika.BlockingConnection(pika.ConnectionParameters(
-                host=pikahost))
+        credentials = pika.PlainCredentials('DSHW2', 'DSHW2')
+        parameters = pika.ConnectionParameters(pikahost,5672,'/',credentials)
+        self.connection = pika.BlockingConnection(parameters)
         self.channel = self.connection.channel()
         self.declare_exchanges()
         self.make_queue()
