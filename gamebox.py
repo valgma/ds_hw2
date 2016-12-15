@@ -269,6 +269,18 @@ class Gamebox(tk.Frame):
                     if value == 1:
                         self.draw_ship(p, row, col)
 
+    def draw_resume_boards(self):
+        players = self.gamestate.list_players()
+        for p in players:
+            board = self.gamestate.get_board(p)
+            for row in range(self.rows):
+                for col in range(self.cols):
+                    value = board[row][col]
+                    if value == 1 and p == self.my_name:
+                        self.draw_ship(p, row, col)
+                    if value == 4:
+                        self.draw_crash(p,row,col)
+
 
     def ready(self):
         if self.validate_ships():

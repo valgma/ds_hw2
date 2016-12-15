@@ -12,7 +12,7 @@ SERVER_KEYS = ["open","closed"]
 Log = make_logger()
 GAME_KEYS = ["game.next","game.leader","game.joined","game.sayonara","game.uri",\
 "game.ping","game.start","game.fire","game.all_sunk","game.over","game.restart",\
-"game.ready","game.configure","game.disconnected","game.skip"]
+"game.ready","game.configure","game.disconnected","game.skip","game.rejoined"]
 #TODO: Field for ":" and other magic strings
 
 class ClientConnector(Thread):
@@ -135,6 +135,8 @@ class ClientConnector(Thread):
             self.game_ui.colour_name_red(body)
         elif rk == "game.skip":
             self.game_ui.skip()
+        elif rk == "game.rejoined" and body == self.app.username:
+            self.game_ui.rejoin()
 
     def lobby_callback(self, ch, method, properties, body):
         rk = method.routing_key

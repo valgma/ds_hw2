@@ -61,6 +61,9 @@ class Gameroom(Thread):
             if not self.owner:
                 self.owner = body
                 self.notify_players("game.leader",self.owner)
+            if body in self.gamestate.disconnected_players:
+                self.gamestate.revive_player(body)
+                self.notify_players("game.rejoined",body)
         elif rk == "game.sayonara":
             if body in self.players:
                 self.players.remove(body)
