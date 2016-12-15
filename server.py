@@ -22,6 +22,8 @@ class Server():
         self.connect(pikahost)
 
         self.kal = KeepAliveListener(self.channel,self.servname)
+        self.kal.setDaemon(True)
+        self.kal.start()
 
         self.gamerooms = {}
         self.objects = {}
