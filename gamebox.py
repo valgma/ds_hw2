@@ -58,8 +58,9 @@ class Gamebox(tk.Frame):
         self.resetbutton.grid_forget()
         self.message_label = tk.Label(self.button_frame, text="Position your ships!")
         self.message_label.grid(row=2, column=0)
-        self.ships_label = tk.Label(self.button_frame, text="Leader is still confirming ships.")
+        self.ships_label = tk.Label(self.button_frame)
         self.ships_label.grid(row=4,column=0)
+        self.update_ship_label()
 
         self.ship_frame = tk.Frame(self)
         #self.ship_frame.grid(row=0, column=3)
@@ -82,6 +83,15 @@ class Gamebox(tk.Frame):
         self.ship5_label.grid(row=3, column=1)
         self.ship_button.grid(row=4, column=0)
         self.ship_frame.grid_forget()
+
+    def update_ship_label(self):
+        if self.my_name == self.master.leader:
+            self.ships_label.config(text="Confirm ships!")
+        else:
+            if self.gamestate.are_ships_confirmed():
+                self.rcv_game_configure()
+            else:
+                self.ships_label.config(text="Leader is still confirming ships.")
 
     def confirm_ships(self):
         ship2 = self.ship2_input.get()
